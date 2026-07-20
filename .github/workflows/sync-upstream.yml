@@ -10,13 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      workflows: write
     steps:
       - name: Checkout fork
         uses: actions/checkout@v4
         with:
           ref: sync-upstream
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
 
       - name: Configure Git identity
         run: |
