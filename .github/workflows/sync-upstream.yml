@@ -34,3 +34,32 @@ jobs:
 
       - name: Push to fork
         run: git push origin sync-upstream --force-with-lease
+
+  sync-main:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Configure Git identity
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      - name: Add upstream remote
+        run: git remote add upstream https://github.com/eclipse-basyx/basyx-aas-web-ui.git
+
+      - name: Fetch upstream
+        run: git fetch upstream
+
+      - name: Rebase onto upstream/main
+        run: git rebase upstream/main
+
+      - name: Push to fork
+        run: git push origin main --force-with-lease
