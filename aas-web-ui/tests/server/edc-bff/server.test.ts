@@ -420,7 +420,7 @@ describe('EDC BFF server', () => {
     expect(response.status).toBe(200)
     expect(payload).toEqual([{ 'edc:counterPartyId': 'TEST_PARTICIPANT_ID' }])
     expect(managementHeaders).toHaveLength(1)
-    expect(managementHeaders[0]?.authorization).toBe('TEST_ACCESS_TOKEN')
+    expect(managementHeaders[0]?.authorization).toBe('Bearer TEST_ACCESS_TOKEN')
     expect(managementHeaders[0]?.['x-api-key']).toBeUndefined()
 
     const rejectedResponse = await discover('rejected')

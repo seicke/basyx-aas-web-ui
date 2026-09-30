@@ -109,7 +109,7 @@ chosen from configuration only; no code change or extra switch variable is neede
 | Configuration | Selected mode | Request header |
 | --- | --- | --- |
 | None of the `CX_EDC_TOKEN_SERVER_*` variables set | API key | `<CX_EDC_DEFAULT_API_KEY_HEADER>: <CX_EDC_DEFAULT_API_KEY>` |
-| At least one `CX_EDC_TOKEN_SERVER_*` variable set | OAuth2 client credentials | `Authorization: <access_token>` |
+| At least one `CX_EDC_TOKEN_SERVER_*` variable set | OAuth2 client credentials | `Authorization: Bearer <access_token>` |
 
 The BFF fails fast at startup when the selected mode is incomplete or ambiguous:
 

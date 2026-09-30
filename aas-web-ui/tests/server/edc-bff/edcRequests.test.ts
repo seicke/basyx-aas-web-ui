@@ -139,7 +139,7 @@ describe('EDC BFF request helpers', () => {
     for (const [, init] of managementCalls) {
       expect(init.headers).toEqual({
         'Content-Type': 'application/json',
-        'Authorization': 'TEST_ACCESS_TOKEN',
+        'Authorization': 'Bearer TEST_ACCESS_TOKEN',
       })
     }
   })
@@ -150,7 +150,7 @@ describe('EDC BFF request helpers', () => {
       if (url === 'https://identity.test/token') {
         return Response.json({ access_token: issuedTokens.shift(), expires_in: 300 })
       }
-      return getAuthorization(init) === 'NEW_ACCESS_TOKEN'
+      return getAuthorization(init) === 'Bearer NEW_ACCESS_TOKEN'
         ? Response.json({ ok: true })
         : Response.json({ error: 'unauthorized' }, { status: 401 })
     })
@@ -166,9 +166,9 @@ describe('EDC BFF request helpers', () => {
     expect(result).toMatchObject({ status: 200, data: { ok: true } })
     expect(fetchMock.mock.calls.map(([url, init]) => [url, getAuthorization(init)])).toEqual([
       ['https://identity.test/token', expect.stringMatching(/^Basic /)],
-      [catalogUrl, 'REVOKED_ACCESS_TOKEN'],
+      [catalogUrl, 'Bearer REVOKED_ACCESS_TOKEN'],
       ['https://identity.test/token', expect.stringMatching(/^Basic /)],
-      [catalogUrl, 'NEW_ACCESS_TOKEN'],
+      [catalogUrl, 'Bearer NEW_ACCESS_TOKEN'],
     ])
     expect(fetchMock.mock.calls[3]?.[1]?.body).toBe(JSON.stringify({ request: true }))
   })

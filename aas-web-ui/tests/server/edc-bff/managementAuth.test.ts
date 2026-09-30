@@ -40,7 +40,7 @@ describe('EDC management authentication', () => {
     const [first, second] = await Promise.all([provider.getAuthHeaders(), provider.getAuthHeaders()])
     const third = await provider.getAuthHeaders()
 
-    expect(first).toEqual({ Authorization: 'TEST_ACCESS_TOKEN' })
+    expect(first).toEqual({ Authorization: 'Bearer TEST_ACCESS_TOKEN' })
     expect(second).toEqual(first)
     expect(third).toEqual(first)
     expect(fetchFn).toHaveBeenCalledTimes(1)
@@ -52,6 +52,13 @@ describe('EDC management authentication', () => {
     expect(init.method).toBe('POST')
     expect((init.headers as Record<string, string>).Authorization).toBe(`Basic ${expectedCredentials}`)
     expect(String(init.body)).toBe('grant_type=client_credentials')
+  })
+
+  it('accepts the Bearer token type in any case', async () => {
+    const fetchFn = vi.fn(async () => createTokenResponse({ access_token: 'TEST_ACCESS_TOKEN', token_type: 'bearer' }))
+    const provider = createManagementAuthProvider(oauthConfig, { fetchFn: fetchFn as unknown as typeof fetch })
+
+    await expect(provider.getAuthHeaders()).resolves.toEqual({ Authorization: 'Bearer TEST_ACCESS_TOKEN' })
   })
 
   it('caches providers per proxy and fetch implementation', async () => {
@@ -71,8 +78,8 @@ describe('EDC management authentication', () => {
     const secondProvider = getManagementAuthProvider(proxy, secondFetch as unknown as typeof fetch)
 
     expect(getManagementAuthProvider(proxy, firstFetch as unknown as typeof fetch)).toBe(firstProvider)
-    await expect(firstProvider.getAuthHeaders()).resolves.toEqual({ Authorization: 'FIRST_ACCESS_TOKEN' })
-    await expect(secondProvider.getAuthHeaders()).resolves.toEqual({ Authorization: 'SECOND_ACCESS_TOKEN' })
+    await expect(firstProvider.getAuthHeaders()).resolves.toEqual({ Authorization: 'Bearer FIRST_ACCESS_TOKEN' })
+    await expect(secondProvider.getAuthHeaders()).resolves.toEqual({ Authorization: 'Bearer SECOND_ACCESS_TOKEN' })
     await firstProvider.getAuthHeaders()
 
     expect(firstFetch).toHaveBeenCalledTimes(1)
@@ -122,11 +129,11 @@ describe('EDC management authentication', () => {
 
     const firstHeaders = await provider.getAuthHeaders()
     expect(provider.invalidate(firstHeaders)).toBe(true)
-    await expect(provider.getAuthHeaders()).resolves.toEqual({ Authorization: 'SECOND_ACCESS_TOKEN' })
+    await expect(provider.getAuthHeaders()).resolves.toEqual({ Authorization: 'Bearer SECOND_ACCESS_TOKEN' })
 
     // A late rejection of the old token must not discard the token that replaced it.
     provider.invalidate(firstHeaders)
-    await expect(provider.getAuthHeaders()).resolves.toEqual({ Authorization: 'SECOND_ACCESS_TOKEN' })
+    await expect(provider.getAuthHeaders()).resolves.toEqual({ Authorization: 'Bearer SECOND_ACCESS_TOKEN' })
     expect(fetchFn).toHaveBeenCalledTimes(2)
   })
 
@@ -137,7 +144,7 @@ describe('EDC management authentication', () => {
     const provider = createManagementAuthProvider(oauthConfig, { fetchFn })
 
     await expect(provider.getAuthHeaders()).rejects.toThrow('EDC OAuth2 token endpoint responded with HTTP 503')
-    await expect(provider.getAuthHeaders()).resolves.toEqual({ Authorization: 'TEST_ACCESS_TOKEN' })
+    await expect(provider.getAuthHeaders()).resolves.toEqual({ Authorization: 'Bearer TEST_ACCESS_TOKEN' })
     expect(fetchFn).toHaveBeenCalledTimes(2)
   })
 
@@ -193,6 +200,14 @@ describe('EDC management authentication', () => {
     await expectTokenError(
       createTokenResponse({ token_type: 'Bearer' }),
       'EDC OAuth2 token endpoint response did not contain an access_token',
+    )
+    await expectTokenError(
+      createTokenResponse({ access_token: 'TEST_ACCESS_TOKEN', token_type: 'DPoP' }),
+      'EDC OAuth2 token endpoint returned a token that is not a Bearer token (token_type: DPoP)',
+    )
+    await expectTokenError(
+      createTokenResponse({ access_token: 'TEST_ACCESS_TOKEN', token_type: 'not a <b>type</b>' }),
+      'EDC OAuth2 token endpoint returned a token that is not a Bearer token',
     )
     await expectTokenError(
       new TypeError('fetch failed'),

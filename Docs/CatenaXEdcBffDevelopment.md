@@ -56,7 +56,7 @@ also allows `http://`.
 | Mode | Configuration | Outgoing header |
 | --- | --- | --- |
 | `api-key` | `CX_EDC_DEFAULT_API_KEY`, `CX_EDC_DEFAULT_API_KEY_HEADER` (default `X-Api-Key`) | `<header>: <api key>` |
-| `oauth2-client-credentials` | `CX_EDC_TOKEN_SERVER_ENDPOINT`, `CX_EDC_TOKEN_SERVER_CLIENT_ID`, `CX_EDC_TOKEN_SERVER_CLIENT_SECRET` | `Authorization: <access_token>` |
+| `oauth2-client-credentials` | `CX_EDC_TOKEN_SERVER_ENDPOINT`, `CX_EDC_TOKEN_SERVER_CLIENT_ID`, `CX_EDC_TOKEN_SERVER_CLIENT_SECRET` | `Authorization: Bearer <access_token>` |
 
 Deployments that only configure `CX_EDC_DEFAULT_API_KEY*` keep their previous behaviour.
 
@@ -76,6 +76,8 @@ Deployments that only configure `CX_EDC_DEFAULT_API_KEY*` keep their previous be
 
 - The token is requested with `POST <token endpoint>`, `Content-Type: application/x-www-form-urlencoded`,
   HTTP basic client authentication, and the body `grant_type=client_credentials`.
+- The access token is sent as `Authorization: Bearer <access_token>`, the standard OAuth2 bearer format
+  (RFC 6750). A missing `token_type` is treated as `Bearer`; any other `token_type` is rejected.
 - The access token is cached in memory and reused until it is close to expiry.
 - The cached lifetime is `expires_in` minus a 30 s refresh skew. Tokens that live 60 s or less use half their
   lifetime as skew instead, so every token is refreshed before it expires. Responses without a usable
@@ -100,6 +102,7 @@ Deployments that only configure `CX_EDC_DEFAULT_API_KEY*` keep their previous be
 | Token endpoint answers another error status | `502 EDC OAuth2 token endpoint responded with HTTP <status> (error: <code>)` |
 | Token endpoint returns a non-JSON body | `502 EDC OAuth2 token endpoint returned a body that is not valid JSON` |
 | Token response has no `access_token` | `502 EDC OAuth2 token endpoint response did not contain an access_token` |
+| Token response has a `token_type` other than `Bearer` | `502 EDC OAuth2 token endpoint returned a token that is not a Bearer token (token_type: <type>)` |
 | Token request times out | `504 EDC OAuth2 token request timed out after <ms> ms` |
 | Token request fails to connect | `502 EDC OAuth2 token request failed: <reason>` |
 

@@ -27,6 +27,7 @@ interface CachedAccessToken {
 
 interface TokenResponsePayload {
   access_token?: unknown
+  token_type?: unknown
   expires_in?: unknown
 }
 
@@ -168,8 +169,15 @@ async function requestAccessToken (
     throw createHttpError('EDC OAuth2 token endpoint response did not contain an access_token', 502)
   }
 
+  // RFC 6749 requires token_type, but some servers omit it; a missing value is treated as Bearer.
+  const tokenType = tokenResponse?.token_type
+  if (tokenType !== undefined && tokenType !== null && String(tokenType).toLowerCase() !== 'bearer') {
+    const typeSuffix = toSafeCode(tokenType) ? ` (token_type: ${String(tokenType)})` : ''
+    throw createHttpError(`EDC OAuth2 token endpoint returned a token that is not a Bearer token${typeSuffix}`, 502)
+  }
+
   return {
-    headerValue: accessToken,
+    headerValue: `Bearer ${accessToken}`,
     expiresAt: now() + resolveTokenLifetimeMs(tokenResponse?.expires_in),
   }
 }
@@ -183,8 +191,12 @@ async function readOAuthErrorCode (response: Response): Promise<string | undefin
     return undefined
   }
 
-  const errorCode = (payload as { error?: unknown } | null)?.error
-  return typeof errorCode === 'string' && /^[\w.-]{1,64}$/.test(errorCode) ? errorCode : undefined
+  return toSafeCode((payload as { error?: unknown } | null)?.error)
+}
+
+/** Accepts short RFC 6749 style codes only, so free text from the token server never reaches error messages. */
+function toSafeCode (value: unknown): string | undefined {
+  return typeof value === 'string' && /^[\w.-]{1,64}$/.test(value) ? value : undefined
 }
 
 async function postTokenRequest (
