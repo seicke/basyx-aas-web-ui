@@ -64,13 +64,16 @@ Deployments that only configure `CX_EDC_DEFAULT_API_KEY*` keep their previous be
 
 - `config.ts` normalizes each proxy into a discriminated `EdcProxyConfig.auth` union and validates it while the
   configuration is loaded, so a misconfigured deployment fails at startup instead of on the first EDC request.
-- `managementAuth.ts` turns that config into an `EdcManagementAuthProvider` with a single
-  `getAuthHeaders()` method. Providers are cached per proxy config object, so one token cache is shared by all
-  routes.
-- `edcRequests.ts` builds the headers for both `forwardJsonToEdc` and `forwardGetToEdc` from that provider, so
-  discovery, catalog, EDR, DTR, and Submodel calls all use the same authentication logic.
+- `managementAuth.ts` turns that config into an `EdcManagementAuthProvider` with two methods:
+  `getAuthHeaders()` returns the headers for the next EDC call, and `invalidate()` discards credentials the EDC
+  rejected and reports whether new ones can differ (OAuth2 tokens) or not (API keys). Providers are cached per proxy
+  config object and fetch function; the BFF always uses the global `fetch`, so all routes share one token cache.
+- `edcRequests.ts` sends every Management API call through `forwardToEdc`, which `forwardJsonToEdc` and
+  `forwardGetToEdc` wrap. It resolves the headers from the provider before sending, so token errors keep their own
+  status, and retries a `401` once with fresh headers when `invalidate()` allows it. Discovery, catalog, EDR, DTR,
+  and Submodel calls therefore all use the same authentication logic.
 - `/status` reports `authMode`, `authConfigured`, and `apiKeyConfigured` only; no secret, URL, or token is
-  exposed to the browser, and nothing is logged.
+  exposed to the browser or logged.
 
 ### Token lifecycle in OAuth2 mode
 
