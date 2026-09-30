@@ -15,12 +15,12 @@ import {
   buildCatalogRequestBody,
   buildConnectorDiscoveryRequestBody,
   buildDspVersionParamsRequestBody,
-  createHttpError,
   fetchDtrShellDescriptorById,
   fetchDtrShellDescriptors,
   fetchSubmodel,
   forwardJsonToEdc,
 } from './edcRequests.js'
+import { createHttpError } from './httpError.js'
 import { isManagementAuthConfigured } from './managementAuth.js'
 
 const proxyUrls = getProxyUrls()

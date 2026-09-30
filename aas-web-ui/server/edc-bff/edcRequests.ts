@@ -10,8 +10,6 @@ import { isCounterPartyAddressAllowed, joinManagementUrl } from './config.js'
 import { createHttpError } from './httpError.js'
 import { getManagementAuthProvider } from './managementAuth.js'
 
-export { createHttpError } from './httpError.js'
-
 export interface EdcForwardResult {
   status: number
   headers: Record<string, string>
