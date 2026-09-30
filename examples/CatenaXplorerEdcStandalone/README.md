@@ -112,8 +112,8 @@ chosen from configuration only; no code change or extra switch variable is neede
 The BFF fails fast at startup when the selected mode is incomplete or ambiguous:
 
 - Setting only some `CX_EDC_TOKEN_SERVER_*` variables aborts the start and names the missing ones.
-- Setting `CX_EDC_DEFAULT_API_KEY` together with a complete token server configuration aborts the start,
-  because the intended mode is ambiguous.
+- Setting `CX_EDC_DEFAULT_API_KEY` together with any `CX_EDC_TOKEN_SERVER_*` variable aborts the start,
+  because the intended mode is ambiguous. The error names the token server variables it found.
 
 Existing deployments that only set `CX_EDC_DEFAULT_API_KEY` and `CX_EDC_DEFAULT_API_KEY_HEADER` keep working
 unchanged.

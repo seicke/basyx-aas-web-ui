@@ -267,8 +267,17 @@ function resolveManagementAuthConfig (proxyId: string, rawProxy: RawProxyConfig)
   const tokenServerEndpoint = trimToUndefined(rawProxy.tokenServerEndpoint)
   const clientId = trimToUndefined(rawProxy.tokenServerClientId)
   const clientSecret = trimToUndefined(rawProxy.tokenServerClientSecret)
+  const tokenServerSettings = [
+    { key: 'tokenServerEndpoint', envName: 'CX_EDC_TOKEN_SERVER_ENDPOINT', value: tokenServerEndpoint },
+    { key: 'tokenServerClientId', envName: 'CX_EDC_TOKEN_SERVER_CLIENT_ID', value: clientId },
+    { key: 'tokenServerClientSecret', envName: 'CX_EDC_TOKEN_SERVER_CLIENT_SECRET', value: clientSecret },
+  ]
+  const presentSettings = tokenServerSettings.filter(setting => setting.value)
+  const missingSettings = tokenServerSettings.filter(setting => !setting.value)
+  const describeSettings = (settings: typeof tokenServerSettings) =>
+    settings.map(setting => `${setting.key} (${setting.envName})`).join(', ')
 
-  if (!tokenServerEndpoint && !clientId && !clientSecret) {
+  if (presentSettings.length === 0) {
     return {
       mode: 'api-key',
       apiKey: apiKey ?? '',
@@ -276,23 +285,19 @@ function resolveManagementAuthConfig (proxyId: string, rawProxy: RawProxyConfig)
     }
   }
 
-  const missingSettings = [
-    { key: 'tokenServerEndpoint', envName: 'CX_EDC_TOKEN_SERVER_ENDPOINT', value: tokenServerEndpoint },
-    { key: 'tokenServerClientId', envName: 'CX_EDC_TOKEN_SERVER_CLIENT_ID', value: clientId },
-    { key: 'tokenServerClientSecret', envName: 'CX_EDC_TOKEN_SERVER_CLIENT_SECRET', value: clientSecret },
-  ].filter(setting => !setting.value)
+  // Checked before completeness so an API key deployment with a stray token variable is reported as ambiguous.
+  if (apiKey) {
+    throw new Error(
+      `EDC proxy "${proxyId}" configures both API key and OAuth2 client credentials authentication `
+      + `(token server settings found: ${describeSettings(presentSettings)}). `
+      + 'Remove either the API key settings or the token server settings.',
+    )
+  }
 
   if (missingSettings.length > 0) {
     throw new Error(
       `EDC proxy "${proxyId}" uses OAuth2 client credentials authentication but is missing `
-      + missingSettings.map(setting => `${setting.key} (${setting.envName})`).join(', '),
-    )
-  }
-
-  if (apiKey) {
-    throw new Error(
-      `EDC proxy "${proxyId}" configures both API key and OAuth2 client credentials authentication. `
-      + 'Remove either the API key settings or the token server settings.',
+      + describeSettings(missingSettings),
     )
   }
 

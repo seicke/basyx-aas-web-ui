@@ -129,6 +129,15 @@ describe('EDC BFF config', () => {
       CX_EDC_TOKEN_SERVER_CLIENT_ID: 'TEST_CLIENT_ID',
       CX_EDC_TOKEN_SERVER_CLIENT_SECRET: 'TEST_CLIENT_SECRET',
     })).toThrow('configures both API key and OAuth2 client credentials authentication')
+
+    expect(() => loadProxyConfigMap({
+      CX_EDC_DEFAULT_MANAGEMENT_URL: 'https://consumer-edc.test/management',
+      CX_EDC_DEFAULT_API_KEY: 'TEST_API_KEY',
+      CX_EDC_TOKEN_SERVER_ENDPOINT: 'https://identity.test/token',
+    })).toThrow(
+      'configures both API key and OAuth2 client credentials authentication '
+      + '(token server settings found: tokenServerEndpoint (CX_EDC_TOKEN_SERVER_ENDPOINT))',
+    )
   })
 
   it('requires JWKS configuration for JWT auth mode', () => {
