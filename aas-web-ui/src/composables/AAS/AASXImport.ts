@@ -77,6 +77,30 @@ function stringifyUnknown (value: unknown): string {
   }
 }
 
+function restoreXmlBlobValues (source: unknown, serialized: unknown): void {
+  // The XML parser leaves Blob values as Base64 strings, while aas-core serializes them as byte arrays.
+  if (Array.isArray(source) && Array.isArray(serialized)) {
+    for (const [index, item] of serialized.entries()) {
+      restoreXmlBlobValues(source[index], item)
+    }
+    return
+  }
+
+  const sourceRecord = asRecord(source)
+  const serializedRecord = asRecord(serialized)
+  if (!sourceRecord || !serializedRecord) {
+    return
+  }
+
+  if (serializedRecord.modelType === 'Blob' && typeof sourceRecord.value === 'string') {
+    serializedRecord.value = sourceRecord.value.replace(/[\t\n\r ]/g, '')
+  }
+
+  for (const [key, value] of Object.entries(serializedRecord)) {
+    restoreXmlBlobValues(sourceRecord[key], value)
+  }
+}
+
 function isExternalHttpUrl (path: string): boolean {
   if (!path || path.trim() === '') {
     return false
@@ -295,8 +319,10 @@ function collectAttachmentUploads (
     const modelType = asString(record.modelType).trim()
     const idShort = asString(record.idShort).trim()
 
+    // SubmodelElementList children are addressed by index only, even when they carry an idShort.
+    const isListEntry = parentModelType === 'SubmodelElementList'
     let nextPath = idShortPath
-    if (modelType !== '' && modelType !== 'Submodel' && idShort !== '') {
+    if (modelType !== '' && modelType !== 'Submodel' && idShort !== '' && !isListEntry) {
       nextPath = [...idShortPath, idShort]
     }
 
@@ -398,6 +424,7 @@ export function useAASXImport (): {
       try {
         const xmlEnvironment = deserializeXml(trimmedText)
         const environment = aasCore.jsonization.toJsonable(xmlEnvironment as unknown as aasCore.types.Class)
+        restoreXmlBlobValues(xmlEnvironment, environment)
         const environmentRecord = asRecord(environment)
         if (!environmentRecord) {
           throw new Error(`Environment XML payload in '${sourceLabel}' is invalid.`)

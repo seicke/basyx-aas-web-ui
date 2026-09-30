@@ -100,7 +100,7 @@ describe('RequestHandling.ts', () => {
 
     const response = await deleteRequest('/api/submodels/1', new Headers(), 'deleting Submodel', false)
 
-    expect(response).toEqual({ success: false, status: 401 })
+    expect(response).toEqual(expect.objectContaining({ success: false, status: 401, raw: expect.any(Response) }))
     expect(mockDeps.setAuthenticationStatusForInfrastructure).toHaveBeenCalledWith('infra-1', false)
     expect(mockDeps.showLoginRequiredSnackbar).toHaveBeenCalledOnce()
   })
@@ -118,7 +118,7 @@ describe('RequestHandling.ts', () => {
 
     const response = await deleteRequest('/api/submodels/1', new Headers(), 'deleting Submodel', false)
 
-    expect(response).toEqual({ success: false, status: 403 })
+    expect(response).toEqual(expect.objectContaining({ success: false, status: 403, raw: expect.any(Response) }))
     expect(consumeLastRequestFailureStatus()).toBe(403)
     expect(consumeLastRequestFailureStatus()).toBeUndefined()
     expect(mockDeps.setAuthenticationStatusForInfrastructure).not.toHaveBeenCalled()
@@ -129,6 +129,47 @@ describe('RequestHandling.ts', () => {
         extendedError: 'You are not allowed to perform this action.',
       }),
     )
+  })
+
+  it.each([
+    ['GET', 'getRequest'],
+    ['POST', 'postRequest'],
+    ['PUT', 'putRequest'],
+    ['PATCH', 'patchRequest'],
+    ['DELETE', 'deleteRequest'],
+  ] as const)('preserves status and headers for empty %s error responses', async (_method, requestName) => {
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response(null, {
+        status: 412,
+        headers: { ETag: '"revision-2"' },
+      }),
+    ) as unknown as typeof fetch
+
+    const { useRequestHandling } = await import('@/composables/RequestHandling')
+    const requests = useRequestHandling()
+    const headers = new Headers()
+    const options = { suppressStatuses: [412] }
+    let response
+    switch (requestName) {
+      case 'getRequest': {
+        response = await requests.getRequest('/resource', 'loading', true, headers, options)
+        break
+      }
+      case 'deleteRequest': {
+        response = await requests.deleteRequest('/resource', headers, 'updating', true, options)
+        break
+      }
+      case 'postRequest': {
+        response = await requests.postRequest('/resource', '{}', headers, 'updating', true, false, options)
+        break
+      }
+      default: {
+        response = await requests[requestName]('/resource', '{}', headers, 'updating', true, options)
+      }
+    }
+
+    expect(response).toEqual(expect.objectContaining({ success: false, status: 412, raw: expect.any(Response) }))
+    expect(response.raw.headers.get('ETag')).toBe('"revision-2"')
   })
 
   it('treats a BaSyx Go 403 error payload without an OAuth token as a login-required response', async () => {
@@ -263,7 +304,7 @@ describe('RequestHandling.ts', () => {
 
     const response = await deleteRequest('/api/submodels/1', new Headers(), 'deleting Submodel', false)
 
-    expect(response).toEqual({ success: false, status: 500 })
+    expect(response).toEqual(expect.objectContaining({ success: false, status: 500, raw: expect.any(Response) }))
     expect(mockDeps.dispatchSnackbar).toHaveBeenCalledWith(
       expect.objectContaining({
         color: 'error',
@@ -335,7 +376,7 @@ describe('RequestHandling.ts', () => {
 
     const response = await putRequest('/api/sme/1', '{}', new Headers(), 'updating Submodel Element', false)
 
-    expect(response).toEqual({ success: false, status: 403 })
+    expect(response).toEqual(expect.objectContaining({ success: false, status: 403, raw: expect.any(Response) }))
     expect(consumeLastRequestFailureStatus()).toBe(403)
     expect(mockDeps.dispatchSnackbar).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -373,7 +414,7 @@ describe('RequestHandling.ts', () => {
 
     const response = await postRequest('/api/submodels', '{}', new Headers(), 'creating Submodel', false)
 
-    expect(response).toEqual({ success: false, status: 403 })
+    expect(response).toEqual(expect.objectContaining({ success: false, status: 403, raw: expect.any(Response) }))
     expect(consumeLastRequestFailureStatus()).toBe(403)
     const details = consumeLastRequestFailureDetails()
     expect(details).toContain('Status: 403')
@@ -403,7 +444,7 @@ describe('RequestHandling.ts', () => {
 
     const response = await postRequest('/api/submodels', '{}', new Headers(), 'creating Submodel', true)
 
-    expect(response).toEqual({ success: false, status: 409 })
+    expect(response).toEqual(expect.objectContaining({ success: false, status: 409, raw: expect.any(Response) }))
     expect(consumeLastRequestFailureStatus()).toBe(409)
   })
 
@@ -433,7 +474,7 @@ describe('RequestHandling.ts', () => {
 
     const response = await postRequest('/api/catena-x/edc/default/submodels/fetch', '{}', new Headers(), 'fetching Submodel', true)
 
-    expect(response).toEqual({ success: false, status: 404 })
+    expect(response).toEqual(expect.objectContaining({ success: false, status: 404, raw: expect.any(Response) }))
     expect(consumeLastRequestFailureStatus()).toBe(404)
     const details = consumeLastRequestFailureDetails()
     expect(details).toContain('Status: 404')
@@ -500,6 +541,241 @@ describe('RequestHandling.ts', () => {
     expect(requestHeaders.has('Authorization')).toBe(false)
     const fetchHeaders = (vi.mocked(global.fetch).mock.calls[0][1]?.headers) as Headers
     expect(fetchHeaders.get('Authorization')).toBe('Bearer token-1')
+  })
+
+  it.each([
+    ['GET', 'getRequest'],
+    ['POST', 'postRequest'],
+    ['PUT', 'putRequest'],
+    ['PATCH', 'patchRequest'],
+    ['DELETE', 'deleteRequest'],
+  ])('blocks an untrusted %s endpoint before fetch', async (_method, method) => {
+    global.fetch = vi.fn().mockResolvedValue(Response.json({})) as unknown as typeof fetch
+    mockState.selectedInfrastructure.components = { AASRepo: { url: 'https://repo.example:8081/api' } }
+    const { useRequestHandling } = await import('@/composables/RequestHandling')
+    const requests = useRequestHandling()
+    const target = 'https://attacker.example/collect'
+    let result
+    if (method === 'getRequest') {
+      result = await requests.getRequest(target, 'retrieving AAS', true)
+    } else if (method === 'deleteRequest') {
+      result = await requests.deleteRequest(target, new Headers(), 'deleting AAS', true)
+    } else {
+      result = await requests[method as 'postRequest' | 'putRequest' | 'patchRequest'](
+        target, '{}', new Headers(), 'updating AAS', true,
+      )
+    }
+
+    expect(result).toMatchObject({ success: false })
+    expect(global.fetch).not.toHaveBeenCalled()
+    expect(mockDeps.dispatchSnackbar).toHaveBeenCalledWith(expect.objectContaining({
+      text: expect.stringContaining('Untrusted endpoint blocked'),
+    }))
+    expect(mockDeps.setAuthenticationStatusForInfrastructure).not.toHaveBeenCalled()
+    expect(mockDeps.showLoginRequiredSnackbar).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['Basic Authentication', { basicAuth: { username: 'user', password: 'secret' } }],
+    ['Bearer Token', { bearerToken: { token: 'secret' } }],
+    ['OAuth2', {}],
+    ['Custom Header', { customHeader: { name: 'X-API-KEY', value: 'secret' } }],
+  ])('blocks an attacker deep link with %s credentials', async (securityType, config) => {
+    global.fetch = vi.fn().mockResolvedValue(Response.json({})) as unknown as typeof fetch
+    mockState.selectedInfrastructure = {
+      id: 'infra-1',
+      auth: { securityType, ...config },
+      token: { accessToken: 'secret' },
+      components: { AASRepo: { url: 'https://repo.example' } },
+    }
+    const { useRequestHandling } = await import('@/composables/RequestHandling')
+    await useRequestHandling().getRequest('https://attacker.example/collect', 'retrieving AAS', true)
+    expect(global.fetch).not.toHaveBeenCalled()
+    expect(mockDeps.dispatchSnackbar).toHaveBeenCalledWith(expect.objectContaining({
+      text: expect.stringContaining('Untrusted endpoint blocked'),
+    }))
+  })
+
+  it.each([
+    'https://repo.example.evil.test/shells',
+    'https://repo.example:8082/shells',
+    // eslint-disable-next-line unicorn/prefer-https -- Scheme mismatch must be rejected.
+    'http://repo.example:8081/shells',
+    '//attacker.example/collect',
+    'javascript:alert(1)',
+    'http://[broken',
+  ])('blocks an untrusted descriptor or invalid target: %s', async target => {
+    global.fetch = vi.fn().mockResolvedValue(Response.json({})) as unknown as typeof fetch
+    mockState.selectedInfrastructure.components = { AASRepo: { url: 'https://repo.example:8081/api' } }
+    const { useRequestHandling } = await import('@/composables/RequestHandling')
+    await useRequestHandling().getRequest(target, 'retrieving Submodel', true)
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    '/api/proxy/shells',
+    `${window.location.origin}/api/proxy/shells`,
+    'https://repo.example:8081/shells',
+    'https://extra.example/submodels',
+  ])('allows a trusted endpoint: %s', async target => {
+    global.fetch = vi.fn().mockResolvedValue(Response.json({ id: 'shell' })) as unknown as typeof fetch
+    mockState.selectedInfrastructure.components = { AASRepo: { url: 'https://repo.example:8081/api' } }
+    mockState.selectedInfrastructure.trustedOrigins = ['https://extra.example']
+    const { useRequestHandling } = await import('@/composables/RequestHandling')
+    const result = await useRequestHandling().getRequest(target, 'retrieving AAS', true)
+    expect(result.success).toBe(true)
+    expect(global.fetch).toHaveBeenCalledOnce()
+    const headers = vi.mocked(global.fetch).mock.calls[0][1]?.headers as Headers
+    expect(headers.get('Authorization')).toBe('Bearer token-1')
+  })
+
+  it('uses an explicit draft infrastructure for both endpoint trust and authentication', async () => {
+    global.fetch = vi.fn().mockResolvedValue(Response.json({ profiles: [] })) as unknown as typeof fetch
+    mockState.selectedInfrastructure = {
+      id: 'selected-infra',
+      auth: { securityType: 'Bearer Token', bearerToken: { token: 'selected-token' } },
+      components: { AASRepo: { url: 'https://old.example' } },
+    }
+    const draftInfrastructure = {
+      id: 'draft-infra',
+      name: 'Draft',
+      template: 'full',
+      auth: {
+        securityType: 'Basic Authentication',
+        basicAuth: { username: 'draft-user', password: 'draft-password' },
+      },
+      components: { AASRepo: { url: 'https://new.example/api' } },
+    } as any
+
+    const { useRequestHandling } = await import('@/composables/RequestHandling')
+    const result = await useRequestHandling().getRequest(
+      'https://new.example/description',
+      'testing draft connection',
+      true,
+      new Headers(),
+      {},
+      'auto',
+      { infrastructure: draftInfrastructure },
+    )
+
+    expect(result.success).toBe(true)
+    expect(global.fetch).toHaveBeenCalledOnce()
+    const headers = vi.mocked(global.fetch).mock.calls[0][1]?.headers as Headers
+    expect(headers.get('Authorization')).toBe(`Basic ${btoa('draft-user:draft-password')}`)
+  })
+
+  it('does not inherit trusted origins from the selected infrastructure when given a draft context', async () => {
+    global.fetch = vi.fn().mockResolvedValue(Response.json({})) as unknown as typeof fetch
+    mockState.selectedInfrastructure = {
+      id: 'selected-infra',
+      auth: { securityType: 'No Authentication' },
+      components: { AASRepo: { url: 'https://selected.example' } },
+    }
+    const draftInfrastructure = {
+      id: 'draft-infra',
+      name: 'Draft',
+      template: 'full',
+      auth: { securityType: 'No Authentication' },
+      components: { AASRepo: { url: 'https://draft.example' } },
+    } as any
+
+    const { useRequestHandling } = await import('@/composables/RequestHandling')
+    const result = await useRequestHandling().getRequest(
+      'https://selected.example/description',
+      'testing draft connection',
+      true,
+      new Headers(),
+      {},
+      'auto',
+      { infrastructure: draftInfrastructure },
+    )
+
+    expect(result).toEqual({ success: false, blocked: true })
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  it('does not apply draft authentication failures to an unrelated selected infrastructure', async () => {
+    global.fetch = vi.fn().mockResolvedValue(new Response('', { status: 401 })) as unknown as typeof fetch
+    mockState.selectedInfrastructure = {
+      id: 'selected-infra',
+      auth: { securityType: 'No Authentication' },
+      components: { AASRepo: { url: 'https://old.example' } },
+    }
+    const draftInfrastructure = {
+      id: 'draft-infra',
+      name: 'Draft',
+      template: 'full',
+      auth: {
+        securityType: 'Basic Authentication',
+        basicAuth: { username: 'draft-user', password: 'draft-password' },
+      },
+      components: { AASRepo: { url: 'https://new.example/api' } },
+    } as any
+
+    const { useRequestHandling } = await import('@/composables/RequestHandling')
+    const result = await useRequestHandling().getRequest(
+      'https://new.example/description',
+      'testing draft connection',
+      false,
+      new Headers(),
+      {},
+      'auto',
+      { infrastructure: draftInfrastructure },
+    )
+
+    expect(result).toMatchObject({ success: false, status: 401 })
+    expect(mockDeps.setAuthenticationStatusForInfrastructure).not.toHaveBeenCalled()
+    expect(mockDeps.showLoginRequiredSnackbar).not.toHaveBeenCalled()
+    expect(mockDeps.dispatchSnackbar).not.toHaveBeenCalled()
+  })
+
+  it('isolates draft authentication failures when editing the selected infrastructure', async () => {
+    global.fetch = vi.fn().mockResolvedValue(new Response('', { status: 401 })) as unknown as typeof fetch
+    mockState.selectedInfrastructure = {
+      id: 'infra-1',
+      auth: { securityType: 'Bearer Token', bearerToken: { token: 'working-token' } },
+      components: { AASRepo: { url: 'https://old.example' } },
+      isAuthenticated: true,
+    }
+    const draftInfrastructure = {
+      id: 'infra-1',
+      name: 'Edited selected infrastructure',
+      template: 'full',
+      auth: {
+        securityType: 'Basic Authentication',
+        basicAuth: { username: 'draft-user', password: 'wrong-password' },
+      },
+      components: { AASRepo: { url: 'https://new.example/api' } },
+    } as any
+
+    const { useRequestHandling } = await import('@/composables/RequestHandling')
+    const result = await useRequestHandling().getRequest(
+      'https://new.example/description',
+      'testing edited connection',
+      true,
+      new Headers(),
+      {},
+      'auto',
+      { infrastructure: draftInfrastructure, isolateAuthenticationFailures: true },
+    )
+
+    expect(result).toMatchObject({ success: false, status: 401 })
+    expect(mockDeps.setAuthenticationStatusForInfrastructure).not.toHaveBeenCalled()
+    expect(mockDeps.showLoginRequiredSnackbar).not.toHaveBeenCalled()
+    expect(mockDeps.dispatchSnackbar).not.toHaveBeenCalled()
+  })
+
+  it('reports an unverified redirect without changing authentication state', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ type: 'opaqueredirect' }) as unknown as typeof fetch
+    const { useRequestHandling } = await import('@/composables/RequestHandling')
+    const result = await useRequestHandling().getRequest('/redirect', 'retrieving AAS', true)
+
+    expect(result).toEqual({ success: false, blocked: true })
+    expect(vi.mocked(global.fetch).mock.calls[0][1]?.redirect).toBe('manual')
+    expect(mockDeps.dispatchSnackbar).toHaveBeenCalledWith(expect.objectContaining({
+      text: expect.stringContaining('Redirect blocked'),
+    }))
+    expect(mockDeps.setAuthenticationStatusForInfrastructure).not.toHaveBeenCalled()
   })
 
   it('sends the configured custom header verbatim under the given name', async () => {
