@@ -48,6 +48,10 @@ The BFF authenticates every call to the consumer EDC Management API through one 
 The same rule applies to multi-proxy documents, where the per-proxy keys are `apiKey`, `apiKeyHeader`,
 `tokenServerEndpoint`, `tokenServerClientId`, and `tokenServerClientSecret`.
 
+Because the client secret is sent to the token endpoint, `CX_EDC_TOKEN_SERVER_ENDPOINT` must be an `https://` URL.
+For local testing, `CX_EDC_ALLOW_INSECURE_TOKEN_SERVER_ENDPOINT=true` (per proxy: `allowInsecureTokenServerEndpoint`)
+also allows `http://`.
+
 | Mode | Configuration | Outgoing header |
 | --- | --- | --- |
 | `api-key` | `CX_EDC_DEFAULT_API_KEY`, `CX_EDC_DEFAULT_API_KEY_HEADER` (default `X-Api-Key`) | `<header>: <api key>` |
@@ -84,6 +88,8 @@ Deployments that only configure `CX_EDC_DEFAULT_API_KEY*` keep their previous be
 | --- | --- |
 | Incomplete OAuth2 configuration | Startup error naming each missing setting |
 | API key and OAuth2 configured together | Startup error about the ambiguous mode |
+| Token endpoint is not an absolute `http(s)` URL | Startup error about `tokenServerEndpoint` |
+| Token endpoint uses `http://` without the insecure opt-in | Startup error asking for `https` or `CX_EDC_ALLOW_INSECURE_TOKEN_SERVER_ENDPOINT=true` |
 | Neither API key nor OAuth2 configured | `503 EDC proxy is not fully configured` |
 | Token endpoint answers `401`/`403` | `502 EDC OAuth2 token endpoint rejected the configured client credentials with HTTP <status>` |
 | Token endpoint answers another error status | `502 EDC OAuth2 token endpoint responded with HTTP <status>` |
@@ -122,6 +128,7 @@ CX_EDC_DEFAULT_MANAGEMENT_URL=http://localhost:8182/management \
 CX_EDC_TOKEN_SERVER_ENDPOINT=http://localhost:8183/token \
 CX_EDC_TOKEN_SERVER_CLIENT_ID=<EDC_TOKEN_CLIENT_ID> \
 CX_EDC_TOKEN_SERVER_CLIENT_SECRET=<EDC_TOKEN_CLIENT_SECRET> \
+CX_EDC_ALLOW_INSECURE_TOKEN_SERVER_ENDPOINT=true \
 CX_EDC_ALLOWED_COUNTER_PARTY_ADDRESSES='*' \
 CX_EDC_ALLOW_INSECURE_COUNTER_PARTY_ADDRESSES=true \
 pnpm bff:start
@@ -320,8 +327,8 @@ http.createServer(async (req, res) => {
 NODE
 ```
 
-Start the BFF with `CX_EDC_TOKEN_SERVER_ENDPOINT=http://localhost:8183/token` and matching client ID and
-secret. The mock Management API above logs for each request whether an `Authorization` or `X-Api-Key` header
+Start the BFF with `CX_EDC_TOKEN_SERVER_ENDPOINT=http://localhost:8183/token`,
+`CX_EDC_ALLOW_INSECURE_TOKEN_SERVER_ENDPOINT=true`, and matching client ID and secret. The mock Management API above logs for each request whether an `Authorization` or `X-Api-Key` header
 arrived, so you can see which mode is active. With `expires_in: 60` the BFF reuses the cached token, and the
 mock token server logs a new token request roughly every 30 seconds while EDC calls continue.
 
@@ -344,6 +351,7 @@ and every token endpoint error case without a running server.
 | `CX_EDC_TOKEN_SERVER_ENDPOINT` | OAuth2 token endpoint. Selects OAuth2 client credentials mode. |
 | `CX_EDC_TOKEN_SERVER_CLIENT_ID` | OAuth2 client ID, required in OAuth2 mode. |
 | `CX_EDC_TOKEN_SERVER_CLIENT_SECRET` | OAuth2 client secret, required in OAuth2 mode. |
+| `CX_EDC_ALLOW_INSECURE_TOKEN_SERVER_ENDPOINT` | Allows an `http://` token endpoint for local testing. |
 | `CX_EDC_DEFAULT_PARTICIPANT_ID` | Optional own participant ID shown in status. |
 | `CX_EDC_DEFAULT_DSP_ENDPOINT` | Optional own DSP endpoint metadata. |
 | `CX_EDC_DEFAULT_DATA_PLANE_PROXY_URL` | Optional data plane proxy metadata for later phases. |

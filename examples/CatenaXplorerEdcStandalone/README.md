@@ -93,9 +93,11 @@ Consumer EDC:
 - `CX_EDC_DEFAULT_MANAGEMENT_URL`: consumer EDC Management API base URL.
 - `CX_EDC_DEFAULT_API_KEY`: consumer EDC Management API key (API key mode).
 - `CX_EDC_DEFAULT_API_KEY_HEADER`: Management API key header, default `X-Api-Key` (API key mode).
-- `CX_EDC_TOKEN_SERVER_ENDPOINT`: OAuth2 token endpoint of the EDC token server (OAuth2 mode).
+- `CX_EDC_TOKEN_SERVER_ENDPOINT`: OAuth2 token endpoint of the EDC token server, `https://` required (OAuth2 mode).
 - `CX_EDC_TOKEN_SERVER_CLIENT_ID`: OAuth2 client ID (OAuth2 mode).
 - `CX_EDC_TOKEN_SERVER_CLIENT_SECRET`: OAuth2 client secret (OAuth2 mode).
+- `CX_EDC_ALLOW_INSECURE_TOKEN_SERVER_ENDPOINT`: allows an `http://` token endpoint; keep `false` except for local
+  test systems.
 - `CX_EDC_DEFAULT_PARTICIPANT_ID`: optional own participant ID.
 - `CX_EDC_DEFAULT_DSP_ENDPOINT`: optional own DSP endpoint.
 
@@ -270,6 +272,9 @@ Container exits at startup with an EDC proxy configuration error:
   or remove the partial token server configuration.
 - `... configures both API key and OAuth2 client credentials authentication`: clear `CX_EDC_DEFAULT_API_KEY`
   or the `CX_EDC_TOKEN_SERVER_*` variables so exactly one mode remains.
+- `... tokenServerEndpoint (CX_EDC_TOKEN_SERVER_ENDPOINT) must use https`: use the `https://` token endpoint.
+  Only for local test systems, set `CX_EDC_ALLOW_INSECURE_TOKEN_SERVER_ENDPOINT=true`.
+- `... tokenServerEndpoint (CX_EDC_TOKEN_SERVER_ENDPOINT) must be an absolute http(s) URL`: fix the endpoint value.
 
 `502` with an `EDC OAuth2 token endpoint ...` message:
 

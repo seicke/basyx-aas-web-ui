@@ -49,6 +49,7 @@
         "CX_EDC_TOKEN_SERVER_ENDPOINT": "${input:catenaXEdcTokenServerEndpoint}",
         "CX_EDC_TOKEN_SERVER_CLIENT_ID": "${input:catenaXEdcTokenServerClientId}",
         "CX_EDC_TOKEN_SERVER_CLIENT_SECRET": "${input:catenaXEdcTokenServerClientSecret}",
+        "CX_EDC_ALLOW_INSECURE_TOKEN_SERVER_ENDPOINT": "false",
         "CX_EDC_ALLOWED_COUNTER_PARTY_ADDRESSES": "${input:catenaXEdcAllowedCounterPartyAddresses}",
         "CX_EDC_ALLOW_INSECURE_COUNTER_PARTY_ADDRESSES": "false",
         "CX_EDC_REQUEST_TIMEOUT_MS": "30000",

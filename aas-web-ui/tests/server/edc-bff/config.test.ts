@@ -178,6 +178,43 @@ describe('EDC BFF config', () => {
     )
   })
 
+  it('requires a valid https token server endpoint unless insecure endpoints are allowed', () => {
+    const oauthEnv = (tokenServerEndpoint: string) => ({
+      CX_EDC_DEFAULT_MANAGEMENT_URL: 'https://consumer-edc.test/management',
+      CX_EDC_TOKEN_SERVER_ENDPOINT: tokenServerEndpoint,
+      CX_EDC_TOKEN_SERVER_CLIENT_ID: 'TEST_CLIENT_ID',
+      CX_EDC_TOKEN_SERVER_CLIENT_SECRET: 'TEST_CLIENT_SECRET',
+    })
+
+    expect(() => loadProxyConfigMap(oauthEnv('identity.test/token')))
+      .toThrow('tokenServerEndpoint (CX_EDC_TOKEN_SERVER_ENDPOINT) must be an absolute http(s) URL')
+    expect(() => loadProxyConfigMap(oauthEnv('ftp://identity.test/token')))
+      .toThrow('must be an absolute http(s) URL')
+    expect(() => loadProxyConfigMap(oauthEnv('http://localhost:8183/token')))
+      .toThrow('tokenServerEndpoint (CX_EDC_TOKEN_SERVER_ENDPOINT) must use https')
+
+    const proxies = loadProxyConfigMap({
+      ...oauthEnv('http://localhost:8183/token'),
+      CX_EDC_ALLOW_INSECURE_TOKEN_SERVER_ENDPOINT: 'true',
+    })
+    expect(proxies.get('default')?.auth).toMatchObject({ tokenServerEndpoint: 'http://localhost:8183/token' })
+
+    const jsonProxies = loadProxyConfigMap({
+      CX_EDC_PROXY_CONFIG_JSON: JSON.stringify({
+        proxies: {
+          local: {
+            managementUrl: 'http://localhost:8182/management',
+            tokenServerEndpoint: 'http://localhost:8183/token',
+            tokenServerClientId: 'TEST_CLIENT_ID',
+            tokenServerClientSecret: 'TEST_CLIENT_SECRET',
+            allowInsecureTokenServerEndpoint: true,
+          },
+        },
+      }),
+    })
+    expect(jsonProxies.get('local')?.auth).toMatchObject({ tokenServerEndpoint: 'http://localhost:8183/token' })
+  })
+
   it('requires JWKS configuration for JWT auth mode', () => {
     expect(() => loadAuthConfig({ CX_EDC_BFF_AUTH_MODE: 'jwt' })).toThrow(
       'CX_EDC_BFF_AUTH_JWKS_URL is required',

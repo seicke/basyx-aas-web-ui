@@ -20,6 +20,7 @@ interface RawProxyConfig {
   tokenServerEndpoint?: unknown
   tokenServerClientId?: unknown
   tokenServerClientSecret?: unknown
+  allowInsecureTokenServerEndpoint?: unknown
   participantId?: unknown
   dspEndpoint?: unknown
   dataPlaneProxyUrl?: unknown
@@ -226,7 +227,7 @@ function normalizeProxyConfig (
   return {
     id: proxyId,
     managementUrl: trimToUndefined(rawProxy.managementUrl) ?? '',
-    auth: resolveManagementAuthConfig(proxyId, rawProxy),
+    auth: resolveManagementAuthConfig(proxyId, rawProxy, env),
     participantId: trimToUndefined(rawProxy.participantId),
     dspEndpoint: trimToUndefined(rawProxy.dspEndpoint),
     dataPlaneProxyUrl: trimToUndefined(rawProxy.dataPlaneProxyUrl),
@@ -262,7 +263,11 @@ function normalizeProxyConfig (
  * OAuth2 client credentials mode is selected as soon as one token server setting is present;
  * otherwise the proxy stays in API key mode.
  */
-function resolveManagementAuthConfig (proxyId: string, rawProxy: RawProxyConfig): EdcManagementAuthConfig {
+function resolveManagementAuthConfig (
+  proxyId: string,
+  rawProxy: RawProxyConfig,
+  env: Env,
+): EdcManagementAuthConfig {
   const apiKey = trimToUndefined(rawProxy.apiKey)
   const tokenServerEndpoint = trimToUndefined(rawProxy.tokenServerEndpoint)
   const clientId = trimToUndefined(rawProxy.tokenServerClientId)
@@ -301,11 +306,36 @@ function resolveManagementAuthConfig (proxyId: string, rawProxy: RawProxyConfig)
     )
   }
 
+  assertTokenServerEndpointAllowed(
+    proxyId,
+    tokenServerEndpoint ?? '',
+    parseBoolean(rawProxy.allowInsecureTokenServerEndpoint)
+    || parseBoolean(env.CX_EDC_ALLOW_INSECURE_TOKEN_SERVER_ENDPOINT),
+  )
+
   return {
     mode: 'oauth2-client-credentials',
     tokenServerEndpoint: tokenServerEndpoint ?? '',
     clientId: clientId ?? '',
     clientSecret: clientSecret ?? '',
+  }
+}
+
+/** The client secret is sent to this endpoint, so plain http needs an explicit opt-in. */
+function assertTokenServerEndpointAllowed (proxyId: string, endpoint: string, allowInsecure: boolean): void {
+  const endpointUrl = normalizeUrl(endpoint)
+  if (!endpointUrl || (endpointUrl.protocol !== 'https:' && endpointUrl.protocol !== 'http:')) {
+    throw new Error(
+      `EDC proxy "${proxyId}" tokenServerEndpoint (CX_EDC_TOKEN_SERVER_ENDPOINT) must be an absolute http(s) URL`,
+    )
+  }
+
+  if (endpointUrl.protocol === 'http:' && !allowInsecure) {
+    throw new Error(
+      `EDC proxy "${proxyId}" tokenServerEndpoint (CX_EDC_TOKEN_SERVER_ENDPOINT) must use https. `
+      + 'Set allowInsecureTokenServerEndpoint (CX_EDC_ALLOW_INSECURE_TOKEN_SERVER_ENDPOINT) to true '
+      + 'to allow http for local testing.',
+    )
   }
 }
 
