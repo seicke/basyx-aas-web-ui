@@ -241,6 +241,15 @@ http.createServer(async (req, res) => {
   let body = ''
   for await (const chunk of req) body += chunk
 
+  console.log(
+    req.method,
+    req.url,
+    'authorization header present:',
+    Boolean(req.headers.authorization),
+    'x-api-key header present:',
+    Boolean(req.headers['x-api-key']),
+  )
+
   res.setHeader('content-type', 'application/json')
 
   if (req.url === '/management/v4alpha/connectordiscovery/connectors') {
@@ -311,8 +320,9 @@ NODE
 ```
 
 Start the BFF with `CX_EDC_TOKEN_SERVER_ENDPOINT=http://localhost:8183/token` and matching client ID and
-secret. The mock Management API above logs the incoming request; with `expires_in: 60` the BFF reuses the
-cached token and requests a new one after roughly 30 seconds.
+secret. The mock Management API above logs for each request whether an `Authorization` or `X-Api-Key` header
+arrived, so you can see which mode is active. With `expires_in: 60` the BFF reuses the cached token, and the
+mock token server logs a new token request roughly every 30 seconds while EDC calls continue.
 
 The unit tests in `tests/server/edc-bff/managementAuth.test.ts` cover header construction, caching, refresh,
 and every token endpoint error case without a running server.
