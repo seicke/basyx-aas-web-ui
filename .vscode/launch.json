@@ -29,6 +29,34 @@
       }
     },
     {
+      "name": "Catena-X EDC BFF (OAuth2)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/aas-web-ui",
+      "program": "${workspaceFolder}/aas-web-ui/dist-bff/edc-bff/server.js",
+      "runtimeArgs": [
+        "${input:envProxyFlag}"
+      ],
+      "preLaunchTask": "aas-web-ui: bff:build",
+      "console": "integratedTerminal",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "env": {
+        "CX_EDC_BFF_PORT": "${input:bffPort}",
+        "CX_EDC_BFF_AUTH_MODE": "none",
+        "CX_EDC_DEFAULT_MANAGEMENT_URL": "${input:catenaXEdcManagementUrl}",
+        "CX_EDC_TOKEN_SERVER_ENDPOINT": "${input:catenaXEdcTokenServerEndpoint}",
+        "CX_EDC_TOKEN_SERVER_CLIENT_ID": "${input:catenaXEdcTokenServerClientId}",
+        "CX_EDC_TOKEN_SERVER_CLIENT_SECRET": "${input:catenaXEdcTokenServerClientSecret}",
+        "CX_EDC_ALLOWED_COUNTER_PARTY_ADDRESSES": "${input:catenaXEdcAllowedCounterPartyAddresses}",
+        "CX_EDC_ALLOW_INSECURE_COUNTER_PARTY_ADDRESSES": "false",
+        "CX_EDC_REQUEST_TIMEOUT_MS": "30000",
+        "CX_EDC_EDR_POLLING_ATTEMPTS": "30",
+        "CX_EDC_EDR_POLLING_INTERVAL_MS": "2000"
+      }
+    },
+    {
       "name": "AAS Web UI",
       "type": "node",
       "request": "launch",
@@ -51,6 +79,14 @@
       "name": "AAS Web UI + Catena-X EDC BFF",
       "configurations": [
         "Catena-X EDC BFF",
+        "AAS Web UI"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "AAS Web UI + Catena-X EDC BFF (OAuth2)",
+      "configurations": [
+        "Catena-X EDC BFF (OAuth2)",
         "AAS Web UI"
       ],
       "stopAll": true
@@ -88,6 +124,22 @@
       "id": "catenaXEdcApiKey",
       "type": "promptString",
       "description": "Catena-X EDC Management API X-Api-Key",
+      "password": true
+    },
+    {
+      "id": "catenaXEdcTokenServerEndpoint",
+      "type": "promptString",
+      "description": "OAuth2 token endpoint, for example https://<identity-host>/realms/<realm>/protocol/openid-connect/token"
+    },
+    {
+      "id": "catenaXEdcTokenServerClientId",
+      "type": "promptString",
+      "description": "OAuth2 client ID for the EDC Management API"
+    },
+    {
+      "id": "catenaXEdcTokenServerClientSecret",
+      "type": "promptString",
+      "description": "OAuth2 client secret for the EDC Management API",
       "password": true
     },
     {

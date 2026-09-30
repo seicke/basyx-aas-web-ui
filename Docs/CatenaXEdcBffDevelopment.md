@@ -126,6 +126,9 @@ CX_EDC_ALLOW_INSECURE_COUNTER_PARTY_ADDRESSES=true \
 pnpm bff:start
 ```
 
+In VS Code, use the **Catena-X EDC BFF** launch configuration for API key mode or **Catena-X EDC BFF (OAuth2)** for
+OAuth2 mode. Each has a matching **AAS Web UI + …** compound that also starts the UI dev server.
+
 For watch mode, build and run the BFF together with:
 
 ```bash
@@ -159,7 +162,8 @@ This runtime setting works with both the standalone `edc-bff-stage` image and th
 For a real connector, replace:
 
 - `CX_EDC_DEFAULT_MANAGEMENT_URL` with your own consumer EDC Management API URL.
-- `CX_EDC_DEFAULT_API_KEY` with the local Management API key.
+- `CX_EDC_DEFAULT_API_KEY` with the local Management API key, or, in OAuth2 mode, `CX_EDC_TOKEN_SERVER_ENDPOINT`,
+  `CX_EDC_TOKEN_SERVER_CLIENT_ID`, and `CX_EDC_TOKEN_SERVER_CLIENT_SECRET` with your token server settings.
 - `CX_EDC_ALLOWED_COUNTER_PARTY_ADDRESSES` with explicit provider DSP endpoint prefixes.
 
 Example allowlist:
