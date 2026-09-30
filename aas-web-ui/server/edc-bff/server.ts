@@ -9,7 +9,7 @@ import type {
 } from './types.js'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { pathToFileURL } from 'node:url'
-import { authorizeRequest, createAuthError } from './auth.js'
+import { authorizeRequest, createHttpError } from './auth.js'
 import { loadRuntimeConfig, redactProxyConfig } from './config.js'
 import {
   buildCatalogRequestBody,
@@ -20,7 +20,6 @@ import {
   fetchSubmodel,
   forwardJsonToEdc,
 } from './edcRequests.js'
-import { createHttpError } from './httpError.js'
 import { isManagementAuthConfigured } from './managementAuth.js'
 
 const proxyUrls = getProxyUrls()
@@ -403,7 +402,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   try {
     startEdcBffServer()
   } catch (error) {
-    const startupError = error instanceof Error ? error : createAuthError(String(error), 500)
+    const startupError = error instanceof Error ? error : createHttpError(String(error), 500)
     console.error(startupError.message)
     process.exitCode = 1
   }

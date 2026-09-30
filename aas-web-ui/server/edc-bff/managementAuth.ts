@@ -5,7 +5,7 @@ import type {
   EdcOAuth2ClientCredentialsAuthConfig,
   EdcProxyConfig,
 } from './types.js'
-import { createHttpError } from './httpError.js'
+import { createHttpError } from './auth.js'
 
 export interface EdcManagementAuthProvider {
   readonly mode: EdcManagementAuthMode

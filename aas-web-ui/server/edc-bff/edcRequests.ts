@@ -6,8 +6,8 @@ import type {
   EdcProxyConfig,
   EdcSubmodelFetchRequest,
 } from './types.js'
+import { createHttpError } from './auth.js'
 import { isCounterPartyAddressAllowed, joinManagementUrl } from './config.js'
-import { createHttpError } from './httpError.js'
 import { getManagementAuthProvider } from './managementAuth.js'
 
 export interface EdcForwardResult {
