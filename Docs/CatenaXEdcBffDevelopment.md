@@ -72,7 +72,8 @@ Deployments that only configure `CX_EDC_DEFAULT_API_KEY*` keep their previous be
 - The token is requested with `POST <token endpoint>`, `Content-Type: application/x-www-form-urlencoded`,
   HTTP basic client authentication, and the body `grant_type=client_credentials`.
 - The access token is cached in memory and reused until it is close to expiry.
-- The cached lifetime is `expires_in` minus a 30 s refresh skew, with a 5 s floor. Responses without a usable
+- The cached lifetime is `expires_in` minus a 30 s refresh skew. Tokens that live 60 s or less use half their
+  lifetime as skew instead, so every token is refreshed before it expires. Responses without a usable
   `expires_in` fall back to 5 minutes.
 - Concurrent EDC calls share a single in-flight token request; the next request after expiry triggers a refresh.
 - The token request uses the proxy's `CX_EDC_REQUEST_TIMEOUT_MS`.

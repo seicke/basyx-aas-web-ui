@@ -95,6 +95,24 @@ describe('EDC management authentication', () => {
     expect(fetchFn).toHaveBeenCalledTimes(2)
   })
 
+  it('refreshes short-lived access tokens before they expire', async () => {
+    const fetchFn = vi.fn(async () => createTokenResponse({ access_token: 'TEST_ACCESS_TOKEN', expires_in: 4 }))
+    let currentTime = 0
+    const provider = createManagementAuthProvider(
+      oauthConfig,
+      { fetchFn: fetchFn as unknown as typeof fetch, now: () => currentTime },
+    )
+
+    await provider.getAuthHeaders()
+    currentTime = 1999
+    await provider.getAuthHeaders()
+    expect(fetchFn).toHaveBeenCalledTimes(1)
+
+    currentTime = 2000
+    await provider.getAuthHeaders()
+    expect(fetchFn).toHaveBeenCalledTimes(2)
+  })
+
   it('requests a new access token after a failed token request', async () => {
     const fetchFn = vi.fn()
       .mockResolvedValueOnce(createTokenResponse({ error: 'temporarily_unavailable' }, 503))

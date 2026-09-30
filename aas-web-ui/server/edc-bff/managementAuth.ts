@@ -31,7 +31,6 @@ interface TokenResponsePayload {
 const defaultRequestTimeoutMs = 30_000
 const tokenRefreshSkewMs = 30_000
 const fallbackTokenLifetimeMs = 300_000
-const minimumTokenLifetimeMs = 5000
 
 const providersByProxy = new WeakMap<EdcProxyConfig, WeakMap<typeof fetch, EdcManagementAuthProvider>>()
 
@@ -201,5 +200,7 @@ function resolveTokenLifetimeMs (expiresIn: unknown): number {
     return fallbackTokenLifetimeMs
   }
 
-  return Math.max(minimumTokenLifetimeMs, lifetimeSeconds * 1000 - tokenRefreshSkewMs)
+  // Short-lived tokens use half their lifetime as skew, so every token is refreshed before it expires.
+  const lifetimeMs = lifetimeSeconds * 1000
+  return lifetimeMs - Math.min(tokenRefreshSkewMs, lifetimeMs / 2)
 }
