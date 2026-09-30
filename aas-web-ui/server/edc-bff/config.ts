@@ -112,7 +112,7 @@ export function redactProxyConfig (proxy: EdcProxyConfig | undefined, id: string
     id,
     configured: Boolean(proxy?.managementUrl) && authConfigured,
     managementUrlConfigured: Boolean(proxy?.managementUrl),
-    authMode: proxy?.auth.mode ?? 'api-key',
+    authMode: proxy?.auth.mode,
     authConfigured,
     apiKeyConfigured: proxy?.auth.mode === 'api-key' && authConfigured,
     participantId: proxy?.participantId,

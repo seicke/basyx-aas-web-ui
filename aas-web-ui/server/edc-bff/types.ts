@@ -35,7 +35,7 @@ export interface RedactedEdcProxyConfig {
   id: string
   configured: boolean
   managementUrlConfigured: boolean
-  authMode: EdcManagementAuthMode
+  authMode?: EdcManagementAuthMode
   authConfigured: boolean
   apiKeyConfigured: boolean
   participantId?: string

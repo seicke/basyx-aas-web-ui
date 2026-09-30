@@ -54,14 +54,18 @@ describe('EDC BFF server', () => {
       id: 'default',
       configured: true,
       managementUrlConfigured: true,
+      authMode: 'api-key',
       apiKeyConfigured: true,
     })
     expect(JSON.stringify(statusPayload)).not.toContain('TEST_API_KEY')
     expect(JSON.stringify(statusPayload)).not.toContain('consumer-edc.test')
 
     const missingResponse = await fetch(`http://127.0.0.1:${port}/api/catena-x/edc/missing/status`)
+    const missingPayload = await missingResponse.json()
 
     expect(missingResponse.status).toBe(404)
+    expect(missingPayload).toMatchObject({ id: 'missing', configured: false, authConfigured: false })
+    expect(missingPayload).not.toHaveProperty('authMode')
   })
 
   it('returns route diagnostics for unsupported BFF actions without exposing secrets', async () => {
