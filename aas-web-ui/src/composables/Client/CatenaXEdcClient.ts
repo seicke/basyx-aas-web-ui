@@ -5,6 +5,8 @@ export interface CatenaXEdcStatus {
   id: string
   configured: boolean
   managementUrlConfigured: boolean
+  authMode: 'api-key' | 'oauth2-client-credentials'
+  authConfigured: boolean
   apiKeyConfigured: boolean
   participantId?: string
   dspEndpointConfigured: boolean

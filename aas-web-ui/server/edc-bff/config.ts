@@ -2,10 +2,12 @@ import type {
   EdcBffAuthConfig,
   EdcBffAuthMode,
   EdcBffRuntimeConfig,
+  EdcManagementAuthConfig,
   EdcProxyConfig,
   RedactedEdcProxyConfig,
 } from './types.js'
 import { readFileSync } from 'node:fs'
+import { isManagementAuthConfigured } from './managementAuth.js'
 
 type Env = NodeJS.ProcessEnv
 type FileReader = (path: string, encoding: BufferEncoding) => string
@@ -15,6 +17,9 @@ interface RawProxyConfig {
   managementUrl?: unknown
   apiKey?: unknown
   apiKeyHeader?: unknown
+  tokenServerEndpoint?: unknown
+  tokenServerClientId?: unknown
+  tokenServerClientSecret?: unknown
   participantId?: unknown
   dspEndpoint?: unknown
   dataPlaneProxyUrl?: unknown
@@ -100,11 +105,15 @@ export function loadProxyConfigMap (
 }
 
 export function redactProxyConfig (proxy: EdcProxyConfig | undefined, id: string): RedactedEdcProxyConfig {
+  const authConfigured = isManagementAuthConfigured(proxy?.auth)
+
   return {
     id,
-    configured: Boolean(proxy?.managementUrl && proxy.apiKey),
+    configured: Boolean(proxy?.managementUrl) && authConfigured,
     managementUrlConfigured: Boolean(proxy?.managementUrl),
-    apiKeyConfigured: Boolean(proxy?.apiKey),
+    authMode: proxy?.auth.mode ?? 'api-key',
+    authConfigured,
+    apiKeyConfigured: proxy?.auth.mode === 'api-key' && authConfigured,
     participantId: proxy?.participantId,
     dspEndpointConfigured: Boolean(proxy?.dspEndpoint),
     dataPlaneProxyUrlConfigured: Boolean(proxy?.dataPlaneProxyUrl),
@@ -179,10 +188,15 @@ function normalizeProxyDocument (document: unknown): Array<[string, RawProxyConf
 }
 
 function readShorthandProxyConfig (env: Env): RawProxyConfig | undefined {
-  if (
-    !trimToUndefined(env.CX_EDC_DEFAULT_MANAGEMENT_URL)
-    && !trimToUndefined(env.CX_EDC_DEFAULT_API_KEY)
-  ) {
+  const shorthandVariables = [
+    env.CX_EDC_DEFAULT_MANAGEMENT_URL,
+    env.CX_EDC_DEFAULT_API_KEY,
+    env.CX_EDC_TOKEN_SERVER_ENDPOINT,
+    env.CX_EDC_TOKEN_SERVER_CLIENT_ID,
+    env.CX_EDC_TOKEN_SERVER_CLIENT_SECRET,
+  ]
+
+  if (shorthandVariables.every(value => !trimToUndefined(value))) {
     return undefined
   }
 
@@ -190,6 +204,9 @@ function readShorthandProxyConfig (env: Env): RawProxyConfig | undefined {
     managementUrl: env.CX_EDC_DEFAULT_MANAGEMENT_URL,
     apiKey: env.CX_EDC_DEFAULT_API_KEY,
     apiKeyHeader: env.CX_EDC_DEFAULT_API_KEY_HEADER,
+    tokenServerEndpoint: env.CX_EDC_TOKEN_SERVER_ENDPOINT,
+    tokenServerClientId: env.CX_EDC_TOKEN_SERVER_CLIENT_ID,
+    tokenServerClientSecret: env.CX_EDC_TOKEN_SERVER_CLIENT_SECRET,
     participantId: env.CX_EDC_DEFAULT_PARTICIPANT_ID,
     dspEndpoint: env.CX_EDC_DEFAULT_DSP_ENDPOINT,
     dataPlaneProxyUrl: env.CX_EDC_DEFAULT_DATA_PLANE_PROXY_URL,
@@ -209,8 +226,7 @@ function normalizeProxyConfig (
   return {
     id: proxyId,
     managementUrl: trimToUndefined(rawProxy.managementUrl) ?? '',
-    apiKey: trimToUndefined(rawProxy.apiKey) ?? '',
-    apiKeyHeader: trimToUndefined(rawProxy.apiKeyHeader) ?? defaultApiKeyHeader,
+    auth: resolveManagementAuthConfig(proxyId, rawProxy),
     participantId: trimToUndefined(rawProxy.participantId),
     dspEndpoint: trimToUndefined(rawProxy.dspEndpoint),
     dataPlaneProxyUrl: trimToUndefined(rawProxy.dataPlaneProxyUrl),
@@ -239,6 +255,52 @@ function normalizeProxyConfig (
       250,
       maxEdrPollingIntervalMs,
     ),
+  }
+}
+
+/**
+ * OAuth2 client credentials mode is selected as soon as one token server setting is present;
+ * otherwise the proxy stays in API key mode.
+ */
+function resolveManagementAuthConfig (proxyId: string, rawProxy: RawProxyConfig): EdcManagementAuthConfig {
+  const apiKey = trimToUndefined(rawProxy.apiKey)
+  const tokenServerEndpoint = trimToUndefined(rawProxy.tokenServerEndpoint)
+  const clientId = trimToUndefined(rawProxy.tokenServerClientId)
+  const clientSecret = trimToUndefined(rawProxy.tokenServerClientSecret)
+
+  if (!tokenServerEndpoint && !clientId && !clientSecret) {
+    return {
+      mode: 'api-key',
+      apiKey: apiKey ?? '',
+      apiKeyHeader: trimToUndefined(rawProxy.apiKeyHeader) ?? defaultApiKeyHeader,
+    }
+  }
+
+  const missingSettings = [
+    { key: 'tokenServerEndpoint', envName: 'CX_EDC_TOKEN_SERVER_ENDPOINT', value: tokenServerEndpoint },
+    { key: 'tokenServerClientId', envName: 'CX_EDC_TOKEN_SERVER_CLIENT_ID', value: clientId },
+    { key: 'tokenServerClientSecret', envName: 'CX_EDC_TOKEN_SERVER_CLIENT_SECRET', value: clientSecret },
+  ].filter(setting => !setting.value)
+
+  if (missingSettings.length > 0) {
+    throw new Error(
+      `EDC proxy "${proxyId}" uses OAuth2 client credentials authentication but is missing `
+      + missingSettings.map(setting => `${setting.key} (${setting.envName})`).join(', '),
+    )
+  }
+
+  if (apiKey) {
+    throw new Error(
+      `EDC proxy "${proxyId}" configures both API key and OAuth2 client credentials authentication. `
+      + 'Remove either the API key settings or the token server settings.',
+    )
+  }
+
+  return {
+    mode: 'oauth2-client-credentials',
+    tokenServerEndpoint: tokenServerEndpoint ?? '',
+    clientId: clientId ?? '',
+    clientSecret: clientSecret ?? '',
   }
 }
 

@@ -21,6 +21,7 @@ import {
   fetchSubmodel,
   forwardJsonToEdc,
 } from './edcRequests.js'
+import { isManagementAuthConfigured } from './managementAuth.js'
 
 const proxyUrls = getProxyUrls()
 if (proxyUrls.length > 0) {
@@ -275,7 +276,7 @@ function parseRoute (request: IncomingMessage): { proxyId: string, action: strin
 }
 
 function assertProxyConfigured (proxy: EdcProxyConfig): void {
-  if (!proxy.managementUrl || !proxy.apiKey) {
+  if (!proxy.managementUrl || !isManagementAuthConfigured(proxy.auth)) {
     throw createHttpError('EDC proxy is not fully configured', 503)
   }
 }

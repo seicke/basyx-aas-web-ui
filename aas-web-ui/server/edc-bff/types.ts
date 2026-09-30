@@ -1,10 +1,26 @@
 export type EdcBffAuthMode = 'jwt' | 'none'
 
+export type EdcManagementAuthMode = 'api-key' | 'oauth2-client-credentials'
+
+export interface EdcApiKeyAuthConfig {
+  mode: 'api-key'
+  apiKey: string
+  apiKeyHeader: string
+}
+
+export interface EdcOAuth2ClientCredentialsAuthConfig {
+  mode: 'oauth2-client-credentials'
+  tokenServerEndpoint: string
+  clientId: string
+  clientSecret: string
+}
+
+export type EdcManagementAuthConfig = EdcApiKeyAuthConfig | EdcOAuth2ClientCredentialsAuthConfig
+
 export interface EdcProxyConfig {
   id: string
   managementUrl: string
-  apiKey: string
-  apiKeyHeader: string
+  auth: EdcManagementAuthConfig
   participantId?: string
   dspEndpoint?: string
   dataPlaneProxyUrl?: string
@@ -19,6 +35,8 @@ export interface RedactedEdcProxyConfig {
   id: string
   configured: boolean
   managementUrlConfigured: boolean
+  authMode: EdcManagementAuthMode
+  authConfigured: boolean
   apiKeyConfigured: boolean
   participantId?: string
   dspEndpointConfigured: boolean

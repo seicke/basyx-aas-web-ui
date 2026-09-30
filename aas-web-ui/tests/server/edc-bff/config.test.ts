@@ -18,11 +18,17 @@ describe('EDC BFF config', () => {
     const proxy = proxies.get('default')
     const redacted = redactProxyConfig(proxy, 'default')
 
-    expect(proxy?.apiKey).toBe('TEST_API_KEY')
+    expect(proxy?.auth).toEqual({
+      mode: 'api-key',
+      apiKey: 'TEST_API_KEY',
+      apiKeyHeader: 'X-Api-Key',
+    })
     expect(redacted).toMatchObject({
       id: 'default',
       configured: true,
       managementUrlConfigured: true,
+      authMode: 'api-key',
+      authConfigured: true,
       apiKeyConfigured: true,
       participantId: 'TEST_PARTICIPANT_ID',
       allowedCounterPartyAddressCount: 1,
@@ -81,7 +87,48 @@ describe('EDC BFF config', () => {
     })
 
     expect(proxies.get('partnerA')?.managementUrl).toBe('https://consumer-a.test/management')
-    expect(proxies.get('partnerB')?.apiKeyHeader).toBe('X-Api-Key')
+    expect(proxies.get('partnerB')?.auth).toMatchObject({ mode: 'api-key', apiKeyHeader: 'X-Api-Key' })
+  })
+
+  it('selects OAuth2 client credentials mode when all token server settings are present', () => {
+    const proxies = loadProxyConfigMap({
+      CX_EDC_DEFAULT_MANAGEMENT_URL: 'https://consumer-edc.test/management',
+      CX_EDC_TOKEN_SERVER_ENDPOINT: 'https://identity.test/token',
+      CX_EDC_TOKEN_SERVER_CLIENT_ID: 'TEST_CLIENT_ID',
+      CX_EDC_TOKEN_SERVER_CLIENT_SECRET: 'TEST_CLIENT_SECRET',
+    })
+
+    const redacted = redactProxyConfig(proxies.get('default'), 'default')
+
+    expect(proxies.get('default')?.auth).toEqual({
+      mode: 'oauth2-client-credentials',
+      tokenServerEndpoint: 'https://identity.test/token',
+      clientId: 'TEST_CLIENT_ID',
+      clientSecret: 'TEST_CLIENT_SECRET',
+    })
+    expect(redacted).toMatchObject({
+      configured: true,
+      authMode: 'oauth2-client-credentials',
+      authConfigured: true,
+      apiKeyConfigured: false,
+    })
+    expect(JSON.stringify(redacted)).not.toContain('TEST_CLIENT_SECRET')
+  })
+
+  it('fails fast on incomplete or ambiguous EDC authentication configuration', () => {
+    expect(() => loadProxyConfigMap({
+      CX_EDC_DEFAULT_MANAGEMENT_URL: 'https://consumer-edc.test/management',
+      CX_EDC_TOKEN_SERVER_ENDPOINT: 'https://identity.test/token',
+      CX_EDC_TOKEN_SERVER_CLIENT_ID: 'TEST_CLIENT_ID',
+    })).toThrow('tokenServerClientSecret (CX_EDC_TOKEN_SERVER_CLIENT_SECRET)')
+
+    expect(() => loadProxyConfigMap({
+      CX_EDC_DEFAULT_MANAGEMENT_URL: 'https://consumer-edc.test/management',
+      CX_EDC_DEFAULT_API_KEY: 'TEST_API_KEY',
+      CX_EDC_TOKEN_SERVER_ENDPOINT: 'https://identity.test/token',
+      CX_EDC_TOKEN_SERVER_CLIENT_ID: 'TEST_CLIENT_ID',
+      CX_EDC_TOKEN_SERVER_CLIENT_SECRET: 'TEST_CLIENT_SECRET',
+    })).toThrow('configures both API key and OAuth2 client credentials authentication')
   })
 
   it('requires JWKS configuration for JWT auth mode', () => {

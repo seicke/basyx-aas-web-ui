@@ -7,6 +7,10 @@ import type {
   EdcSubmodelFetchRequest,
 } from './types.js'
 import { isCounterPartyAddressAllowed, joinManagementUrl } from './config.js'
+import { createHttpError } from './httpError.js'
+import { getManagementAuthProvider } from './managementAuth.js'
+
+export { createHttpError } from './httpError.js'
 
 export interface EdcForwardResult {
   status: number
@@ -429,16 +433,14 @@ export async function forwardJsonToEdc (
   body: Record<string, unknown>,
   fetchFn: typeof fetch = fetch,
 ): Promise<EdcForwardResult> {
+  const headers = await createManagementRequestHeaders(proxy, fetchFn)
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), proxy.requestTimeoutMs)
 
   try {
     const response = await fetchFn(joinManagementUrl(proxy, path), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        [proxy.apiKeyHeader]: proxy.apiKey,
-      },
+      headers,
       body: JSON.stringify(body),
       signal: controller.signal,
     })
@@ -472,16 +474,14 @@ export async function forwardGetToEdc (
   path: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<EdcForwardResult> {
+  const headers = await createManagementRequestHeaders(proxy, fetchFn)
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), proxy.requestTimeoutMs)
 
   try {
     const response = await fetchFn(joinManagementUrl(proxy, path), {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        [proxy.apiKeyHeader]: proxy.apiKey,
-      },
+      headers,
       signal: controller.signal,
     })
     const data = await parseResponseBody(response)
@@ -513,17 +513,21 @@ function isAbortError (error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
 }
 
+async function createManagementRequestHeaders (
+  proxy: EdcProxyConfig,
+  fetchFn: typeof fetch,
+): Promise<Record<string, string>> {
+  return {
+    'Content-Type': 'application/json',
+    ...await getManagementAuthProvider(proxy, fetchFn).getAuthHeaders(),
+  }
+}
+
 function describeFetchError (error: unknown): string {
   if (error instanceof Error) {
     return error.name === 'AbortError' ? 'Request to EDC timed out' : error.message
   }
   return 'Unknown error while forwarding request to EDC'
-}
-
-export function createHttpError (message: string, status: number): Error & { status: number } {
-  const error = new Error(message) as Error & { status: number }
-  error.status = status
-  return error
 }
 
 function assertCounterPartyAddressAllowed (proxy: EdcProxyConfig, counterPartyAddress: string): void {

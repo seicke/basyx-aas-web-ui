@@ -31,9 +31,69 @@ infrastructures:
       type: none
 ```
 
-Only `proxyId` and optional UI defaults belong in this file. Do not add the EDC Management API URL or API key here.
+Only `proxyId` and optional UI defaults belong in this file. Do not add the EDC Management API URL, API key, or OAuth2 client credentials here.
 
-## 2. Run the BFF
+## 2. Choose an EDC Authentication Mode
+
+The BFF authenticates every call to the consumer EDC Management API through one shared component,
+`server/edc-bff/managementAuth.ts`. It supports two modes and selects one per EDC proxy purely from configuration.
+
+### Selection rule
+
+1. If none of `CX_EDC_TOKEN_SERVER_ENDPOINT`, `CX_EDC_TOKEN_SERVER_CLIENT_ID`, and
+   `CX_EDC_TOKEN_SERVER_CLIENT_SECRET` is set, the proxy uses **API key** mode.
+2. If at least one of them is set, the proxy uses **OAuth2 client credentials** mode. All three values are then
+   required, and `CX_EDC_DEFAULT_API_KEY` must not be set.
+
+The same rule applies to multi-proxy documents, where the per-proxy keys are `apiKey`, `apiKeyHeader`,
+`tokenServerEndpoint`, `tokenServerClientId`, and `tokenServerClientSecret`.
+
+| Mode | Configuration | Outgoing header |
+| --- | --- | --- |
+| `api-key` | `CX_EDC_DEFAULT_API_KEY`, `CX_EDC_DEFAULT_API_KEY_HEADER` (default `X-Api-Key`) | `<header>: <api key>` |
+| `oauth2-client-credentials` | `CX_EDC_TOKEN_SERVER_ENDPOINT`, `CX_EDC_TOKEN_SERVER_CLIENT_ID`, `CX_EDC_TOKEN_SERVER_CLIENT_SECRET` | `Authorization: <access_token>` |
+
+Deployments that only configure `CX_EDC_DEFAULT_API_KEY*` keep their previous behaviour.
+
+### Implementation design
+
+- `config.ts` normalizes each proxy into a discriminated `EdcProxyConfig.auth` union and validates it while the
+  configuration is loaded, so a misconfigured deployment fails at startup instead of on the first EDC request.
+- `managementAuth.ts` turns that config into an `EdcManagementAuthProvider` with a single
+  `getAuthHeaders()` method. Providers are cached per proxy config object, so one token cache is shared by all
+  routes.
+- `edcRequests.ts` builds the headers for both `forwardJsonToEdc` and `forwardGetToEdc` from that provider, so
+  discovery, catalog, EDR, DTR, and Submodel calls all use the same authentication logic.
+- `/status` reports `authMode`, `authConfigured`, and `apiKeyConfigured` only; no secret, URL, or token is
+  exposed to the browser, and nothing is logged.
+
+### Token lifecycle in OAuth2 mode
+
+- The token is requested with `POST <token endpoint>`, `Content-Type: application/x-www-form-urlencoded`,
+  HTTP basic client authentication, and the body `grant_type=client_credentials`.
+- The access token is cached in memory and reused until it is close to expiry.
+- The cached lifetime is `expires_in` minus a 30 s refresh skew, with a 5 s floor. Responses without a usable
+  `expires_in` fall back to 5 minutes.
+- Concurrent EDC calls share a single in-flight token request; the next request after expiry triggers a refresh.
+- The token request uses the proxy's `CX_EDC_REQUEST_TIMEOUT_MS`.
+
+### Error cases
+
+| Situation | Result |
+| --- | --- |
+| Incomplete OAuth2 configuration | Startup error naming each missing setting |
+| API key and OAuth2 configured together | Startup error about the ambiguous mode |
+| Neither API key nor OAuth2 configured | `503 EDC proxy is not fully configured` |
+| Token endpoint answers `401`/`403` | `502 EDC OAuth2 token endpoint rejected the configured client credentials with HTTP <status>` |
+| Token endpoint answers another error status | `502 EDC OAuth2 token endpoint responded with HTTP <status>` |
+| Token endpoint returns a non-JSON body | `502 EDC OAuth2 token endpoint returned a body that is not valid JSON` |
+| Token response has no `access_token` | `502 EDC OAuth2 token endpoint response did not contain an access_token` |
+| Token request times out | `504 EDC OAuth2 token request timed out after <ms> ms` |
+| Token request fails to connect | `502 EDC OAuth2 token request failed: <reason>` |
+
+Error messages never include the client secret, the API key, or the access token.
+
+## 3. Run the BFF
 
 From `aas-web-ui`, build the BFF once:
 
@@ -47,6 +107,20 @@ Start it with local development auth disabled:
 CX_EDC_BFF_AUTH_MODE=none \
 CX_EDC_DEFAULT_MANAGEMENT_URL=http://localhost:8182/management \
 CX_EDC_DEFAULT_API_KEY=<EDC_MANAGEMENT_API_KEY> \
+CX_EDC_ALLOWED_COUNTER_PARTY_ADDRESSES='*' \
+CX_EDC_ALLOW_INSECURE_COUNTER_PARTY_ADDRESSES=true \
+pnpm bff:start
+```
+
+To run the same BFF in OAuth2 client credentials mode, replace the API key variable with the token server
+variables:
+
+```bash
+CX_EDC_BFF_AUTH_MODE=none \
+CX_EDC_DEFAULT_MANAGEMENT_URL=http://localhost:8182/management \
+CX_EDC_TOKEN_SERVER_ENDPOINT=http://localhost:8183/token \
+CX_EDC_TOKEN_SERVER_CLIENT_ID=<EDC_TOKEN_CLIENT_ID> \
+CX_EDC_TOKEN_SERVER_CLIENT_SECRET=<EDC_TOKEN_CLIENT_SECRET> \
 CX_EDC_ALLOWED_COUNTER_PARTY_ADDRESSES='*' \
 CX_EDC_ALLOW_INSECURE_COUNTER_PARTY_ADDRESSES=true \
 pnpm bff:start
@@ -122,7 +196,7 @@ CX_EDC_ALLOW_INSECURE_COUNTER_PARTY_ADDRESSES=true \
 pnpm bff:start
 ```
 
-## 3. Run the UI Dev Server
+## 4. Run the UI Dev Server
 
 In a second terminal, start Vite:
 
@@ -142,13 +216,16 @@ Open the UI, select the Catena-X infrastructure, and open CatenaXplorer. Choose 
 
 With editable endpoint configuration enabled, use **Settings → Manage Infrastructures** to manage multiple partners and their default. A successfully loaded runtime partner also offers **Save partner** in CatenaXplorer. Partner details are browser-local configuration, while Management API credentials and `CX_EDC_ALLOWED_COUNTER_PARTY_ADDRESSES` remain server-side.
 
-## 4. Smoke Test Without a Real EDC
+## 5. Smoke Test Without a Real EDC
 
-Status can be tested with only the BFF running:
+Status can be tested with only the BFF running, and it also shows which authentication mode is active:
 
 ```bash
 curl http://localhost:3001/api/catena-x/edc/default/status
 ```
+
+The response contains `"authMode": "api-key"` or `"authMode": "oauth2-client-credentials"` plus
+`"authConfigured": true`, and never the secret itself.
 
 For discovery and catalog requests without a real connector, run a tiny mock Management API in another terminal:
 
@@ -197,7 +274,7 @@ http.createServer(async (req, res) => {
 NODE
 ```
 
-Then use the BFF command from step 2 with:
+Then use the BFF command from step 3 with:
 
 ```bash
 CX_EDC_DEFAULT_MANAGEMENT_URL=http://localhost:8182/management
@@ -205,7 +282,38 @@ CX_EDC_ALLOWED_COUNTER_PARTY_ADDRESSES='*'
 CX_EDC_ALLOW_INSECURE_COUNTER_PARTY_ADDRESSES=true
 ```
 
-## 5. Useful BFF Environment Variables
+To exercise OAuth2 mode locally, add a mock token server in another terminal:
+
+```bash
+node - <<'NODE'
+import http from 'node:http'
+
+http.createServer(async (req, res) => {
+  let body = ''
+  for await (const chunk of req) body += chunk
+
+  console.log(req.method, req.url, 'authorization header present:', Boolean(req.headers.authorization))
+
+  res.setHeader('content-type', 'application/json')
+  res.end(JSON.stringify({
+    access_token: 'mock-access-token',
+    token_type: 'Bearer',
+    expires_in: 60,
+  }))
+}).listen(8183, () => {
+  console.log('Mock token server listening on http://localhost:8183/token')
+})
+NODE
+```
+
+Start the BFF with `CX_EDC_TOKEN_SERVER_ENDPOINT=http://localhost:8183/token` and matching client ID and
+secret. The mock Management API above logs the incoming request; with `expires_in: 60` the BFF reuses the
+cached token and requests a new one after roughly 30 seconds.
+
+The unit tests in `tests/server/edc-bff/managementAuth.test.ts` cover header construction, caching, refresh,
+and every token endpoint error case without a running server.
+
+## 6. Useful BFF Environment Variables
 
 | Variable | Purpose |
 | --- | --- |
@@ -216,8 +324,11 @@ CX_EDC_ALLOW_INSECURE_COUNTER_PARTY_ADDRESSES=true
 | `CX_EDC_BFF_AUTH_AUDIENCE` | Optional JWT audience check. |
 | `CX_EDC_BFF_REQUIRED_ROLES` | Comma-separated required roles/scopes. |
 | `CX_EDC_DEFAULT_MANAGEMENT_URL` | Server-side consumer EDC Management API URL. |
-| `CX_EDC_DEFAULT_API_KEY` | Server-side EDC Management API key. |
+| `CX_EDC_DEFAULT_API_KEY` | Server-side EDC Management API key. Selects API key mode. |
 | `CX_EDC_DEFAULT_API_KEY_HEADER` | API key header, default `X-Api-Key`. |
+| `CX_EDC_TOKEN_SERVER_ENDPOINT` | OAuth2 token endpoint. Selects OAuth2 client credentials mode. |
+| `CX_EDC_TOKEN_SERVER_CLIENT_ID` | OAuth2 client ID, required in OAuth2 mode. |
+| `CX_EDC_TOKEN_SERVER_CLIENT_SECRET` | OAuth2 client secret, required in OAuth2 mode. |
 | `CX_EDC_DEFAULT_PARTICIPANT_ID` | Optional own participant ID shown in status. |
 | `CX_EDC_DEFAULT_DSP_ENDPOINT` | Optional own DSP endpoint metadata. |
 | `CX_EDC_DEFAULT_DATA_PLANE_PROXY_URL` | Optional data plane proxy metadata for later phases. |
@@ -240,11 +351,15 @@ For multiple proxy IDs, use `CX_EDC_PROXY_CONFIG_JSON` or `CX_EDC_PROXY_CONFIG_F
     },
     "partner-test": {
       "managementUrl": "https://consumer-test.example/management",
-      "apiKey": "<EDC_MANAGEMENT_API_KEY>",
+      "tokenServerEndpoint": "https://identity.example/realms/catena-x/protocol/openid-connect/token",
+      "tokenServerClientId": "<EDC_TOKEN_CLIENT_ID>",
+      "tokenServerClientSecret": "<EDC_TOKEN_CLIENT_SECRET>",
       "participantId": "TEST_PARTICIPANT_ID"
     }
   }
 }
 ```
+
+Each proxy picks its authentication mode independently, using the same selection rule.
 
 The infrastructure `catenaX.edc.proxyId` selects one of these server-side proxy entries.

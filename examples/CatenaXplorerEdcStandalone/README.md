@@ -22,8 +22,7 @@ Before starting the container, collect these values from your Catena-X environme
 Consumer EDC:
 
 - EDC Management API base URL, ending at `/management`.
-- Management API key.
-- Management API key header name, usually `X-Api-Key`.
+- Either a Management API key and its header name, or OAuth2 client credentials for the EDC token server.
 - Optional own participant ID.
 - Optional own DSP endpoint.
 
@@ -58,6 +57,7 @@ Important rules:
 - Do not publish the internal backend port `3001`.
 - Do not put the EDC Management API URL or API key in `basyx-infra.yml`.
 - Do not put client credentials or API keys into browser-facing configuration.
+- Keep OAuth2 token server credentials in container environment variables or a secret store, never in the UI configuration.
 - Keep the UI reachable only by authorized internal users or protect it with your ingress/reverse proxy.
 
 The default example sets `CX_EDC_BFF_AUTH_MODE=none`. That means the internal backend trusts requests that reach the UI container. This is appropriate only when access to the UI itself is controlled by the deployment environment.
@@ -91,10 +91,53 @@ Internal backend:
 Consumer EDC:
 
 - `CX_EDC_DEFAULT_MANAGEMENT_URL`: consumer EDC Management API base URL.
-- `CX_EDC_DEFAULT_API_KEY`: consumer EDC Management API key.
-- `CX_EDC_DEFAULT_API_KEY_HEADER`: Management API key header, usually `X-Api-Key`.
+- `CX_EDC_DEFAULT_API_KEY`: consumer EDC Management API key (API key mode).
+- `CX_EDC_DEFAULT_API_KEY_HEADER`: Management API key header, default `X-Api-Key` (API key mode).
+- `CX_EDC_TOKEN_SERVER_ENDPOINT`: OAuth2 token endpoint of the EDC token server (OAuth2 mode).
+- `CX_EDC_TOKEN_SERVER_CLIENT_ID`: OAuth2 client ID (OAuth2 mode).
+- `CX_EDC_TOKEN_SERVER_CLIENT_SECRET`: OAuth2 client secret (OAuth2 mode).
 - `CX_EDC_DEFAULT_PARTICIPANT_ID`: optional own participant ID.
 - `CX_EDC_DEFAULT_DSP_ENDPOINT`: optional own DSP endpoint.
+
+### EDC Authentication Mode Selection
+
+The BFF authenticates every request to the consumer EDC Management API in exactly one mode. The mode is
+chosen from configuration only; no code change or extra switch variable is needed.
+
+| Configuration | Selected mode | Request header |
+| --- | --- | --- |
+| None of the `CX_EDC_TOKEN_SERVER_*` variables set | API key | `<CX_EDC_DEFAULT_API_KEY_HEADER>: <CX_EDC_DEFAULT_API_KEY>` |
+| At least one `CX_EDC_TOKEN_SERVER_*` variable set | OAuth2 client credentials | `Authorization: <access_token>` |
+
+The BFF fails fast at startup when the selected mode is incomplete or ambiguous:
+
+- Setting only some `CX_EDC_TOKEN_SERVER_*` variables aborts the start and names the missing ones.
+- Setting `CX_EDC_DEFAULT_API_KEY` together with a complete token server configuration aborts the start,
+  because the intended mode is ambiguous.
+
+Existing deployments that only set `CX_EDC_DEFAULT_API_KEY` and `CX_EDC_DEFAULT_API_KEY_HEADER` keep working
+unchanged.
+
+API key example:
+
+```bash
+CX_EDC_DEFAULT_MANAGEMENT_URL=https://consumer-edc.example.test/management
+CX_EDC_DEFAULT_API_KEY=<EDC_MANAGEMENT_API_KEY>
+CX_EDC_DEFAULT_API_KEY_HEADER=X-Api-Key
+```
+
+OAuth2 client credentials example:
+
+```bash
+CX_EDC_DEFAULT_MANAGEMENT_URL=https://consumer-edc.example.test/management
+CX_EDC_TOKEN_SERVER_ENDPOINT=https://identity.example.test/realms/catena-x/protocol/openid-connect/token
+CX_EDC_TOKEN_SERVER_CLIENT_ID=<EDC_TOKEN_CLIENT_ID>
+CX_EDC_TOKEN_SERVER_CLIENT_SECRET=<EDC_TOKEN_CLIENT_SECRET>
+```
+
+In OAuth2 mode the BFF requests an access token with `grant_type=client_credentials` and HTTP basic client
+authentication, caches it, and refreshes it shortly before it expires. Client secrets and access tokens stay
+server-side and are never logged or returned to the browser.
 
 Partner allowlist:
 
@@ -220,6 +263,19 @@ Allowlist error:
 
 - The requested provider DSP endpoint is not allowed.
 - Add the exact provider DSP endpoint prefix to `CX_EDC_ALLOWED_COUNTER_PARTY_ADDRESSES`.
+
+Container exits at startup with an EDC proxy configuration error:
+
+- `... is missing tokenServerClientSecret (CX_EDC_TOKEN_SERVER_CLIENT_SECRET)`: complete the OAuth2 settings
+  or remove the partial token server configuration.
+- `... configures both API key and OAuth2 client credentials authentication`: clear `CX_EDC_DEFAULT_API_KEY`
+  or the `CX_EDC_TOKEN_SERVER_*` variables so exactly one mode remains.
+
+`502` with an `EDC OAuth2 token endpoint ...` message:
+
+- The token server rejected the client credentials, returned an error status, or returned no `access_token`.
+- Verify `CX_EDC_TOKEN_SERVER_ENDPOINT`, the client ID, the client secret, and that the client is allowed to use
+  the client credentials grant.
 
 EDR polling timeout:
 

@@ -31,8 +31,7 @@ describe('EDC BFF server', () => {
         ['default', {
           id: 'default',
           managementUrl: 'https://consumer-edc.test/management',
-          apiKey: 'TEST_API_KEY',
-          apiKeyHeader: 'X-Api-Key',
+          auth: { mode: 'api-key', apiKey: 'TEST_API_KEY', apiKeyHeader: 'X-Api-Key' },
           allowedCounterPartyAddresses: [],
           allowInsecureCounterPartyAddresses: false,
           requestTimeoutMs: 30_000,
@@ -73,8 +72,7 @@ describe('EDC BFF server', () => {
         ['default', {
           id: 'default',
           managementUrl: 'https://consumer-edc.test/management',
-          apiKey: 'TEST_API_KEY',
-          apiKeyHeader: 'X-Api-Key',
+          auth: { mode: 'api-key', apiKey: 'TEST_API_KEY', apiKeyHeader: 'X-Api-Key' },
           allowedCounterPartyAddresses: [],
           allowInsecureCounterPartyAddresses: false,
           requestTimeoutMs: 30_000,
@@ -173,8 +171,7 @@ describe('EDC BFF server', () => {
         ['default', {
           id: 'default',
           managementUrl: `http://127.0.0.1:${upstreamPort}/management`,
-          apiKey: 'TEST_API_KEY',
-          apiKeyHeader: 'X-Api-Key',
+          auth: { mode: 'api-key', apiKey: 'TEST_API_KEY', apiKeyHeader: 'X-Api-Key' },
           allowedCounterPartyAddresses: ['https://counterparty-dsp.test/api/v1/dsp'],
           allowInsecureCounterPartyAddresses: false,
           requestTimeoutMs: 30_000,
@@ -283,8 +280,7 @@ describe('EDC BFF server', () => {
         ['default', {
           id: 'default',
           managementUrl: `http://127.0.0.1:${upstreamPort}/management`,
-          apiKey: 'TEST_API_KEY',
-          apiKeyHeader: 'X-Api-Key',
+          auth: { mode: 'api-key', apiKey: 'TEST_API_KEY', apiKeyHeader: 'X-Api-Key' },
           allowedCounterPartyAddresses: ['https://counterparty-dsp.test/api/v1/dsp'],
           allowInsecureCounterPartyAddresses: false,
           requestTimeoutMs: 30_000,
