@@ -138,31 +138,44 @@ describe('EDC management authentication', () => {
         },
       )
 
-      await expect(provider.getAuthHeaders()).rejects.toMatchObject({
-        message: expect.stringContaining(message),
-        status,
-      })
+      await expect(provider.getAuthHeaders()).rejects.toMatchObject({ message, status })
     }
 
     await expectTokenError(
       createTokenResponse({ error: 'invalid_client' }, 401),
-      'rejected the configured client credentials with HTTP 401',
+      'EDC OAuth2 token endpoint rejected the configured client credentials with HTTP 401 (error: invalid_client)',
+    )
+    await expectTokenError(
+      createTokenResponse({ error: 'invalid_client', error_description: 'Invalid client secret' }, 400),
+      'EDC OAuth2 token endpoint rejected the configured client credentials with HTTP 400 (error: invalid_client)',
     )
     await expectTokenError(
       createTokenResponse({ error: 'access_denied' }, 403),
-      'rejected the configured client credentials with HTTP 403',
+      'EDC OAuth2 token endpoint rejected the configured client credentials with HTTP 403 (error: access_denied)',
+    )
+    await expectTokenError(
+      createTokenResponse({ error: 'unauthorized_client' }, 400),
+      'EDC OAuth2 token endpoint responded with HTTP 400 (error: unauthorized_client)',
     )
     await expectTokenError(
       createTokenResponse({ error: 'server_error' }, 500),
-      'EDC OAuth2 token endpoint responded with HTTP 500',
+      'EDC OAuth2 token endpoint responded with HTTP 500 (error: server_error)',
+    )
+    await expectTokenError(
+      createTokenResponse({ error: 'not a <b>code</b>' }, 400),
+      'EDC OAuth2 token endpoint responded with HTTP 400',
+    )
+    await expectTokenError(
+      new Response('<html>Bad Gateway</html>', { status: 502, headers: { 'Content-Type': 'text/html' } }),
+      'EDC OAuth2 token endpoint responded with HTTP 502',
     )
     await expectTokenError(
       new Response('<html></html>', { status: 200, headers: { 'Content-Type': 'text/html' } }),
-      'returned a body that is not valid JSON',
+      'EDC OAuth2 token endpoint returned a body that is not valid JSON',
     )
     await expectTokenError(
       createTokenResponse({ token_type: 'Bearer' }),
-      'did not contain an access_token',
+      'EDC OAuth2 token endpoint response did not contain an access_token',
     )
     await expectTokenError(
       new TypeError('fetch failed'),

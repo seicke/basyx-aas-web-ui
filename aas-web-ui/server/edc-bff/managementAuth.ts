@@ -131,15 +131,18 @@ async function requestAccessToken (
 ): Promise<CachedAccessToken> {
   const response = await postTokenRequest(tokenServerEndpoint, credentials, fetchFn, requestTimeoutMs)
 
-  if (response.status === 401 || response.status === 403) {
-    throw createHttpError(
-      `EDC OAuth2 token endpoint rejected the configured client credentials with HTTP ${response.status}`,
-      502,
-    )
-  }
-
   if (!response.ok) {
-    throw createHttpError(`EDC OAuth2 token endpoint responded with HTTP ${response.status}`, 502)
+    const errorCode = await readOAuthErrorCode(response)
+    const errorSuffix = errorCode ? ` (error: ${errorCode})` : ''
+
+    if (response.status === 401 || response.status === 403 || errorCode === 'invalid_client') {
+      throw createHttpError(
+        `EDC OAuth2 token endpoint rejected the configured client credentials with HTTP ${response.status}${errorSuffix}`,
+        502,
+      )
+    }
+
+    throw createHttpError(`EDC OAuth2 token endpoint responded with HTTP ${response.status}${errorSuffix}`, 502)
   }
 
   let payload: unknown
@@ -159,6 +162,19 @@ async function requestAccessToken (
     headerValue: accessToken,
     expiresAt: now() + resolveTokenLifetimeMs(tokenResponse?.expires_in),
   }
+}
+
+/** Reads only the RFC 6749 `error` code; the free-text `error_description` is not passed on. */
+async function readOAuthErrorCode (response: Response): Promise<string | undefined> {
+  let payload: unknown
+  try {
+    payload = await response.json()
+  } catch {
+    return undefined
+  }
+
+  const errorCode = (payload as { error?: unknown } | null)?.error
+  return typeof errorCode === 'string' && /^[\w.-]{1,64}$/.test(errorCode) ? errorCode : undefined
 }
 
 async function postTokenRequest (

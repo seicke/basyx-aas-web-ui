@@ -91,14 +91,16 @@ Deployments that only configure `CX_EDC_DEFAULT_API_KEY*` keep their previous be
 | Token endpoint is not an absolute `http(s)` URL | Startup error about `tokenServerEndpoint` |
 | Token endpoint uses `http://` without the insecure opt-in | Startup error asking for `https` or `CX_EDC_ALLOW_INSECURE_TOKEN_SERVER_ENDPOINT=true` |
 | Neither API key nor OAuth2 configured | `503 EDC proxy is not fully configured` |
-| Token endpoint answers `401`/`403` | `502 EDC OAuth2 token endpoint rejected the configured client credentials with HTTP <status>` |
-| Token endpoint answers another error status | `502 EDC OAuth2 token endpoint responded with HTTP <status>` |
+| Token endpoint answers `401`/`403` or OAuth2 error `invalid_client` | `502 EDC OAuth2 token endpoint rejected the configured client credentials with HTTP <status> (error: <code>)` |
+| Token endpoint answers another error status | `502 EDC OAuth2 token endpoint responded with HTTP <status> (error: <code>)` |
 | Token endpoint returns a non-JSON body | `502 EDC OAuth2 token endpoint returned a body that is not valid JSON` |
 | Token response has no `access_token` | `502 EDC OAuth2 token endpoint response did not contain an access_token` |
 | Token request times out | `504 EDC OAuth2 token request timed out after <ms> ms` |
 | Token request fails to connect | `502 EDC OAuth2 token request failed: <reason>` |
 
-Error messages never include the client secret, the API key, or the access token.
+For error statuses, `(error: <code>)` carries the OAuth2 `error` code from the token server response, for example
+`unauthorized_client` or `invalid_scope`, and is omitted when the body has none. The free-text `error_description`
+is not passed on. Error messages never include the client secret, the API key, or the access token.
 
 ## 3. Run the BFF
 

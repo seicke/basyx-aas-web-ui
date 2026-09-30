@@ -428,8 +428,9 @@ describe('EDC BFF server', () => {
 
     expect(rejectedResponse.status).toBe(502)
     expect(rejectedPayload).toMatchObject({
-      error: 'EDC OAuth2 token endpoint rejected the configured client credentials with HTTP 401',
+      error: 'EDC OAuth2 token endpoint rejected the configured client credentials with HTTP 401 (error: invalid_client)',
       status: 502,
+      code: 'EDC_OAUTH2_TOKEN_ENDPOINT_REJECTED_THE_CONFIGURED_CLIENT_CREDENTIALS_WITH_HTTP_401',
     })
     expect(managementHeaders).toHaveLength(1)
     expect(JSON.stringify([payload, rejectedPayload])).not.toMatch(/TEST_ACCESS_TOKEN|CLIENT_SECRET/)

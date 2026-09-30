@@ -279,6 +279,9 @@ Container exits at startup with an EDC proxy configuration error:
 `502` with an `EDC OAuth2 token endpoint ...` message:
 
 - The token server rejected the client credentials, returned an error status, or returned no `access_token`.
+- If the token server sent an OAuth2 error code, the message ends with it, for example `(error: invalid_client)`
+  for wrong credentials, `(error: unauthorized_client)` when the client may not use the client credentials grant,
+  or `(error: invalid_scope)`.
 - Verify `CX_EDC_TOKEN_SERVER_ENDPOINT`, the client ID, the client secret, and that the client is allowed to use
   the client credentials grant.
 
