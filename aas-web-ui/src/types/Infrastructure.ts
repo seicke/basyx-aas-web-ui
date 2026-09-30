@@ -89,7 +89,8 @@ export interface ComponentConfig {
 
 /**
  * Public Catena-X EDC metadata. This deliberately contains no Management API
- * URL or API key; those belong to the server-side EDC proxy configuration.
+ * URL or credentials (API key or OAuth2 client credentials); those belong to
+ * the server-side EDC proxy configuration.
  */
 export interface CatenaXEdcConfig {
   proxyId: string
