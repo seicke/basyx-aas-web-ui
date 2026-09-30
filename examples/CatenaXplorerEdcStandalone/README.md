@@ -138,7 +138,8 @@ CX_EDC_TOKEN_SERVER_CLIENT_SECRET=<EDC_TOKEN_CLIENT_SECRET>
 ```
 
 In OAuth2 mode the BFF requests an access token with `grant_type=client_credentials` and HTTP basic client
-authentication, caches it, and refreshes it shortly before it expires. Client secrets and access tokens stay
+authentication, caches it, and refreshes it shortly before it expires. If the EDC rejects a cached token with
+`401`, the BFF requests a new one and retries the call once. Client secrets and access tokens stay
 server-side and are never logged or returned to the browser.
 
 Partner allowlist:

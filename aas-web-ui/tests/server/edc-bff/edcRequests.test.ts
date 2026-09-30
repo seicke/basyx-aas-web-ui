@@ -32,6 +32,22 @@ function createProxyConfig (): EdcProxyConfig {
   }
 }
 
+function createOAuthProxyConfig (): EdcProxyConfig {
+  return {
+    ...createProxyConfig(),
+    auth: {
+      mode: 'oauth2-client-credentials',
+      tokenServerEndpoint: 'https://identity.test/token',
+      clientId: 'TEST_CLIENT_ID',
+      clientSecret: 'TEST_CLIENT_SECRET',
+    },
+  }
+}
+
+function getAuthorization (init: RequestInit | undefined): string | undefined {
+  return (init?.headers as Record<string, string> | undefined)?.Authorization
+}
+
 describe('EDC BFF request helpers', () => {
   it('builds connector discovery requests', () => {
     expect(buildConnectorDiscoveryRequestBody({
@@ -107,15 +123,7 @@ describe('EDC BFF request helpers', () => {
     const fetchMock = vi.fn(async (url: string) => url === 'https://identity.test/token'
       ? Response.json({ access_token: 'TEST_ACCESS_TOKEN', expires_in: 300 })
       : Response.json({ ok: true }))
-    const proxy: EdcProxyConfig = {
-      ...createProxyConfig(),
-      auth: {
-        mode: 'oauth2-client-credentials',
-        tokenServerEndpoint: 'https://identity.test/token',
-        clientId: 'TEST_CLIENT_ID',
-        clientSecret: 'TEST_CLIENT_SECRET',
-      },
-    }
+    const proxy = createOAuthProxyConfig()
 
     await forwardJsonToEdc(proxy, '/v3/catalog/request', { request: true }, fetchMock as unknown as typeof fetch)
     await forwardGetToEdc(proxy, '/v3/edrs/transfer-1/dataaddress', fetchMock as unknown as typeof fetch)
@@ -134,6 +142,53 @@ describe('EDC BFF request helpers', () => {
         'Authorization': 'TEST_ACCESS_TOKEN',
       })
     }
+  })
+
+  it('retries once with a new OAuth2 access token when the EDC rejects the cached one', async () => {
+    const issuedTokens = ['REVOKED_ACCESS_TOKEN', 'NEW_ACCESS_TOKEN']
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === 'https://identity.test/token') {
+        return Response.json({ access_token: issuedTokens.shift(), expires_in: 300 })
+      }
+      return getAuthorization(init) === 'NEW_ACCESS_TOKEN'
+        ? Response.json({ ok: true })
+        : Response.json({ error: 'unauthorized' }, { status: 401 })
+    })
+
+    const result = await forwardJsonToEdc(
+      createOAuthProxyConfig(),
+      '/v3/catalog/request',
+      { request: true },
+      fetchMock as unknown as typeof fetch,
+    )
+
+    const catalogUrl = 'https://consumer-edc.test/management/v3/catalog/request'
+    expect(result).toMatchObject({ status: 200, data: { ok: true } })
+    expect(fetchMock.mock.calls.map(([url, init]) => [url, getAuthorization(init)])).toEqual([
+      ['https://identity.test/token', expect.stringMatching(/^Basic /)],
+      [catalogUrl, 'REVOKED_ACCESS_TOKEN'],
+      ['https://identity.test/token', expect.stringMatching(/^Basic /)],
+      [catalogUrl, 'NEW_ACCESS_TOKEN'],
+    ])
+    expect(fetchMock.mock.calls[3]?.[1]?.body).toBe(JSON.stringify({ request: true }))
+  })
+
+  it('retries a rejected EDC request at most once and never in API key mode', async () => {
+    const path = '/v3/edrs/transfer-1/dataaddress'
+    const oauthFetch = vi.fn(async (url: string) => url === 'https://identity.test/token'
+      ? Response.json({ access_token: 'REJECTED_ACCESS_TOKEN', expires_in: 300 })
+      : Response.json({ error: 'unauthorized' }, { status: 401 }))
+    const apiKeyFetch = vi.fn(async () => Response.json({ error: 'unauthorized' }, { status: 401 }))
+
+    await expect(forwardGetToEdc(createOAuthProxyConfig(), path, oauthFetch as unknown as typeof fetch))
+      .resolves
+      .toMatchObject({ status: 401 })
+    await expect(forwardGetToEdc(createProxyConfig(), path, apiKeyFetch as unknown as typeof fetch))
+      .resolves
+      .toMatchObject({ status: 401 })
+
+    expect(oauthFetch).toHaveBeenCalledTimes(4)
+    expect(apiKeyFetch).toHaveBeenCalledTimes(1)
   })
 
   it('extracts DTR catalog data and builds EDR contract requests', () => {

@@ -27,6 +27,7 @@ describe('EDC management authentication', () => {
 
     expect(provider.mode).toBe('api-key')
     await expect(provider.getAuthHeaders()).resolves.toEqual({ 'X-Custom-Key': 'TEST_API_KEY' })
+    expect(provider.invalidate({ 'X-Custom-Key': 'TEST_API_KEY' })).toBe(false)
   })
 
   it('requests an access token with basic client credentials and caches it', async () => {
@@ -110,6 +111,22 @@ describe('EDC management authentication', () => {
 
     currentTime = 2000
     await provider.getAuthHeaders()
+    expect(fetchFn).toHaveBeenCalledTimes(2)
+  })
+
+  it('discards only the rejected access token', async () => {
+    const fetchFn = vi.fn()
+      .mockResolvedValueOnce(createTokenResponse({ access_token: 'FIRST_ACCESS_TOKEN', expires_in: 300 }))
+      .mockResolvedValueOnce(createTokenResponse({ access_token: 'SECOND_ACCESS_TOKEN', expires_in: 300 }))
+    const provider = createManagementAuthProvider(oauthConfig, { fetchFn })
+
+    const firstHeaders = await provider.getAuthHeaders()
+    expect(provider.invalidate(firstHeaders)).toBe(true)
+    await expect(provider.getAuthHeaders()).resolves.toEqual({ Authorization: 'SECOND_ACCESS_TOKEN' })
+
+    // A late rejection of the old token must not discard the token that replaced it.
+    provider.invalidate(firstHeaders)
+    await expect(provider.getAuthHeaders()).resolves.toEqual({ Authorization: 'SECOND_ACCESS_TOKEN' })
     expect(fetchFn).toHaveBeenCalledTimes(2)
   })
 

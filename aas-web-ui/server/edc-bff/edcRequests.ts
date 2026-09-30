@@ -431,40 +431,7 @@ export async function forwardJsonToEdc (
   body: Record<string, unknown>,
   fetchFn: typeof fetch = fetch,
 ): Promise<EdcForwardResult> {
-  const headers = await createManagementRequestHeaders(proxy, fetchFn)
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), proxy.requestTimeoutMs)
-
-  try {
-    const response = await fetchFn(joinManagementUrl(proxy, path), {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    })
-    const data = await parseResponseBody(response)
-
-    return {
-      status: response.status,
-      headers: {
-        'content-type': response.headers.get('content-type') ?? 'application/json',
-      },
-      data,
-    }
-  } catch (error) {
-    if (isAbortError(error)) {
-      throw error
-    }
-
-    console.error('Error forwarding JSON to EDC:', error)
-    return {
-      status: 500,
-      headers: { 'content-type': 'application/json' },
-      data: { error: describeFetchError(error) },
-    }
-  } finally {
-    clearTimeout(timeout)
-  }
+  return forwardToEdc(proxy, path, { method: 'POST', body: JSON.stringify(body) }, fetchFn)
 }
 
 export async function forwardGetToEdc (
@@ -472,14 +439,47 @@ export async function forwardGetToEdc (
   path: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<EdcForwardResult> {
-  const headers = await createManagementRequestHeaders(proxy, fetchFn)
+  return forwardToEdc(proxy, path, { method: 'GET' }, fetchFn)
+}
+
+/**
+ * Auth headers are resolved outside the request error handling, so token failures keep their own status.
+ * A 401 for a replaceable credential, such as a revoked OAuth2 token, is retried once with fresh headers.
+ */
+async function forwardToEdc (
+  proxy: EdcProxyConfig,
+  path: string,
+  init: RequestInit,
+  fetchFn: typeof fetch,
+): Promise<EdcForwardResult> {
+  const authProvider = getManagementAuthProvider(proxy, fetchFn)
+  const authHeaders = await authProvider.getAuthHeaders()
+  const result = await sendManagementRequest(proxy, path, init, authHeaders, fetchFn)
+
+  if (result.status !== 401 || !authProvider.invalidate(authHeaders)) {
+    return result
+  }
+
+  return sendManagementRequest(proxy, path, init, await authProvider.getAuthHeaders(), fetchFn)
+}
+
+async function sendManagementRequest (
+  proxy: EdcProxyConfig,
+  path: string,
+  init: RequestInit,
+  authHeaders: Record<string, string>,
+  fetchFn: typeof fetch,
+): Promise<EdcForwardResult> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), proxy.requestTimeoutMs)
 
   try {
     const response = await fetchFn(joinManagementUrl(proxy, path), {
-      method: 'GET',
-      headers,
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
       signal: controller.signal,
     })
     const data = await parseResponseBody(response)
@@ -496,7 +496,7 @@ export async function forwardGetToEdc (
       throw error
     }
 
-    console.error('Error forwarding GET to EDC:', error)
+    console.error(`Error forwarding ${init.method} to EDC:`, error)
     return {
       status: 500,
       headers: { 'content-type': 'application/json' },
@@ -509,16 +509,6 @@ export async function forwardGetToEdc (
 
 function isAbortError (error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
-}
-
-async function createManagementRequestHeaders (
-  proxy: EdcProxyConfig,
-  fetchFn: typeof fetch,
-): Promise<Record<string, string>> {
-  return {
-    'Content-Type': 'application/json',
-    ...await getManagementAuthProvider(proxy, fetchFn).getAuthHeaders(),
-  }
 }
 
 function describeFetchError (error: unknown): string {

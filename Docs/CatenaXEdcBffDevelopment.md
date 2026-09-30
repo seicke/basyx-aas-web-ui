@@ -80,6 +80,9 @@ Deployments that only configure `CX_EDC_DEFAULT_API_KEY*` keep their previous be
   lifetime as skew instead, so every token is refreshed before it expires. Responses without a usable
   `expires_in` fall back to 5 minutes.
 - Concurrent EDC calls share a single in-flight token request; the next request after expiry triggers a refresh.
+- If the EDC answers `401` although the token is still cached (for example after revocation, key rotation, or
+  clock drift), the BFF drops that token, requests a new one, and retries the call once. A second `401` is returned
+  to the caller. API key mode never retries, because the key would not change.
 - The token request uses the proxy's `CX_EDC_REQUEST_TIMEOUT_MS`.
 
 ### Error cases

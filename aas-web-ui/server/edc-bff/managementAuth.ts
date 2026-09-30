@@ -10,6 +10,8 @@ import { createHttpError } from './httpError.js'
 export interface EdcManagementAuthProvider {
   readonly mode: EdcManagementAuthMode
   getAuthHeaders: () => Promise<Record<string, string>>
+  /** Discards the credentials sent in rejected headers; returns true if new headers can differ from them. */
+  invalidate: (rejectedHeaders: Record<string, string>) => boolean
 }
 
 export interface EdcManagementAuthProviderOptions {
@@ -86,6 +88,7 @@ function createApiKeyAuthProvider (auth: EdcApiKeyAuthConfig): EdcManagementAuth
   return {
     mode: 'api-key',
     getAuthHeaders: () => Promise.resolve({ ...headers }),
+    invalidate: () => false,
   }
 }
 
@@ -119,6 +122,13 @@ function createOAuth2ClientCredentialsAuthProvider (
   return {
     mode: 'oauth2-client-credentials',
     getAuthHeaders: async () => ({ Authorization: (await resolveToken()).headerValue }),
+    invalidate: rejectedHeaders => {
+      // Only the rejected token is dropped, so a token another request already refreshed stays cached.
+      if (cachedToken?.headerValue === rejectedHeaders.Authorization) {
+        cachedToken = undefined
+      }
+      return true
+    },
   }
 }
 
