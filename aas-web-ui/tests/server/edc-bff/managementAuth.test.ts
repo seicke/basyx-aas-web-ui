@@ -1,8 +1,13 @@
+import type { EdcProxyConfig } from '../../../server/edc-bff/types'
 import { describe, expect, it, vi } from 'vitest'
-import { createManagementAuthProvider } from '../../../server/edc-bff/managementAuth'
+import { createManagementAuthProvider, getManagementAuthProvider } from '../../../server/edc-bff/managementAuth'
 
 function createTokenResponse (body: unknown, status = 200): Response {
   return Response.json(body, { status })
+}
+
+function createTokenFetch (accessToken: string) {
+  return vi.fn(async () => createTokenResponse({ access_token: accessToken, expires_in: 300 }))
 }
 
 describe('EDC management authentication', () => {
@@ -44,6 +49,36 @@ describe('EDC management authentication', () => {
     expect(init.method).toBe('POST')
     expect((init.headers as Record<string, string>).Authorization).toBe(`Basic ${expectedCredentials}`)
     expect(String(init.body)).toBe('grant_type=client_credentials')
+  })
+
+  it('caches providers per proxy and fetch implementation', async () => {
+    const proxy: EdcProxyConfig = {
+      id: 'default',
+      managementUrl: 'https://consumer-edc.test/management',
+      auth: {
+        mode: 'oauth2-client-credentials',
+        tokenServerEndpoint: 'https://identity.test/token',
+        clientId: 'TEST_CLIENT_ID',
+        clientSecret: 'TEST_CLIENT_SECRET',
+      },
+      allowedCounterPartyAddresses: [],
+      allowInsecureCounterPartyAddresses: false,
+      requestTimeoutMs: 30_000,
+      edrPollingAttempts: 30,
+      edrPollingIntervalMs: 2000,
+    }
+    const firstFetch = createTokenFetch('FIRST_ACCESS_TOKEN')
+    const secondFetch = createTokenFetch('SECOND_ACCESS_TOKEN')
+    const firstProvider = getManagementAuthProvider(proxy, firstFetch as unknown as typeof fetch)
+    const secondProvider = getManagementAuthProvider(proxy, secondFetch as unknown as typeof fetch)
+
+    expect(getManagementAuthProvider(proxy, firstFetch as unknown as typeof fetch)).toBe(firstProvider)
+    await expect(firstProvider.getAuthHeaders()).resolves.toEqual({ Authorization: 'FIRST_ACCESS_TOKEN' })
+    await expect(secondProvider.getAuthHeaders()).resolves.toEqual({ Authorization: 'SECOND_ACCESS_TOKEN' })
+    await firstProvider.getAuthHeaders()
+
+    expect(firstFetch).toHaveBeenCalledTimes(1)
+    expect(secondFetch).toHaveBeenCalledTimes(1)
   })
 
   it('refreshes the access token before it expires', async () => {

@@ -33,7 +33,7 @@ const tokenRefreshSkewMs = 30_000
 const fallbackTokenLifetimeMs = 300_000
 const minimumTokenLifetimeMs = 5000
 
-const providersByProxy = new WeakMap<EdcProxyConfig, EdcManagementAuthProvider>()
+const providersByProxy = new WeakMap<EdcProxyConfig, WeakMap<typeof fetch, EdcManagementAuthProvider>>()
 
 export function isManagementAuthConfigured (auth: EdcManagementAuthConfig | undefined): boolean {
   if (!auth) {
@@ -45,12 +45,21 @@ export function isManagementAuthConfigured (auth: EdcManagementAuthConfig | unde
     : auth.tokenServerEndpoint !== '' && auth.clientId !== '' && auth.clientSecret !== ''
 }
 
-/** Providers are cached per proxy config object so OAuth2 access tokens survive across requests. */
+/**
+ * Providers are cached per proxy config object and fetch implementation, so OAuth2 access tokens survive
+ * across requests while callers that inject their own fetch get a separate token cache.
+ */
 export function getManagementAuthProvider (
   proxy: EdcProxyConfig,
   fetchFn: typeof fetch = fetch,
 ): EdcManagementAuthProvider {
-  const cachedProvider = providersByProxy.get(proxy)
+  let providersByFetch = providersByProxy.get(proxy)
+  if (!providersByFetch) {
+    providersByFetch = new WeakMap()
+    providersByProxy.set(proxy, providersByFetch)
+  }
+
+  const cachedProvider = providersByFetch.get(fetchFn)
   if (cachedProvider) {
     return cachedProvider
   }
@@ -59,7 +68,7 @@ export function getManagementAuthProvider (
     fetchFn,
     requestTimeoutMs: proxy.requestTimeoutMs,
   })
-  providersByProxy.set(proxy, provider)
+  providersByFetch.set(fetchFn, provider)
   return provider
 }
 
