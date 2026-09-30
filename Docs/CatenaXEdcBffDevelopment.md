@@ -41,7 +41,8 @@ The BFF authenticates every call to the consumer EDC Management API through one 
 ### Selection rule
 
 1. If none of `CX_EDC_TOKEN_SERVER_ENDPOINT`, `CX_EDC_TOKEN_SERVER_CLIENT_ID`, and
-   `CX_EDC_TOKEN_SERVER_CLIENT_SECRET` is set, the proxy uses **API key** mode.
+   `CX_EDC_TOKEN_SERVER_CLIENT_SECRET` is set, the proxy uses **API key** mode. When a Management API URL is
+   configured, `CX_EDC_DEFAULT_API_KEY` is then required.
 2. If at least one of them is set, the proxy uses **OAuth2 client credentials** mode. All three values are then
    required, and `CX_EDC_DEFAULT_API_KEY` must not be set.
 
@@ -93,7 +94,8 @@ Deployments that only configure `CX_EDC_DEFAULT_API_KEY*` keep their previous be
 | API key and OAuth2 configured together | Startup error about the ambiguous mode |
 | Token endpoint is not an absolute `http(s)` URL | Startup error about `tokenServerEndpoint` |
 | Token endpoint uses `http://` without the insecure opt-in | Startup error asking for `https` or `CX_EDC_ALLOW_INSECURE_TOKEN_SERVER_ENDPOINT=true` |
-| Neither API key nor OAuth2 configured | `503 EDC proxy is not fully configured` |
+| Management API URL set, but neither API key nor OAuth2 configured | Startup error asking for one of the two modes |
+| Management API URL missing | `503 EDC proxy is not fully configured` |
 | Token endpoint answers `401`/`403` or OAuth2 error `invalid_client` | `502 EDC OAuth2 token endpoint rejected the configured client credentials with HTTP <status> (error: <code>)` |
 | Token endpoint answers another error status | `502 EDC OAuth2 token endpoint responded with HTTP <status> (error: <code>)` |
 | Token endpoint returns a non-JSON body | `502 EDC OAuth2 token endpoint returned a body that is not valid JSON` |

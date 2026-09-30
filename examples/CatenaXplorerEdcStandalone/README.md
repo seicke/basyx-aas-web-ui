@@ -113,6 +113,8 @@ chosen from configuration only; no code change or extra switch variable is neede
 
 The BFF fails fast at startup when the selected mode is incomplete or ambiguous:
 
+- Setting `CX_EDC_DEFAULT_MANAGEMENT_URL` without `CX_EDC_DEFAULT_API_KEY` or the `CX_EDC_TOKEN_SERVER_*`
+  variables aborts the start, because no authentication mode is configured.
 - Setting only some `CX_EDC_TOKEN_SERVER_*` variables aborts the start and names the missing ones.
 - Setting `CX_EDC_DEFAULT_API_KEY` together with any `CX_EDC_TOKEN_SERVER_*` variable aborts the start,
   because the intended mode is ambiguous. The error names the token server variables it found.
@@ -269,6 +271,8 @@ Allowlist error:
 
 Container exits at startup with an EDC proxy configuration error:
 
+- `... has a management URL but no EDC authentication`: set `CX_EDC_DEFAULT_API_KEY` for API key mode, or all
+  three `CX_EDC_TOKEN_SERVER_*` variables for OAuth2 mode.
 - `... is missing tokenServerClientSecret (CX_EDC_TOKEN_SERVER_CLIENT_SECRET)`: complete the OAuth2 settings
   or remove the partial token server configuration.
 - `... configures both API key and OAuth2 client credentials authentication`: clear `CX_EDC_DEFAULT_API_KEY`

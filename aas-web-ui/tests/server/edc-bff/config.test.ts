@@ -156,6 +156,19 @@ describe('EDC BFF config', () => {
   it('fails fast on incomplete or ambiguous EDC authentication configuration', () => {
     expect(() => loadProxyConfigMap({
       CX_EDC_DEFAULT_MANAGEMENT_URL: 'https://consumer-edc.test/management',
+      CX_EDC_DEFAULT_API_KEY_HEADER: 'X-Api-Key',
+    })).toThrow('EDC proxy "default" has a management URL but no EDC authentication')
+
+    expect(() => loadProxyConfigMap({
+      CX_EDC_PROXY_CONFIG_JSON: JSON.stringify({
+        proxies: { partnerA: { managementUrl: 'https://consumer-a.test/management' } },
+      }),
+    })).toThrow('EDC proxy "partnerA" has a management URL but no EDC authentication')
+
+    expect(loadProxyConfigMap({ CX_EDC_DEFAULT_API_KEY: 'TEST_API_KEY' }).get('default')?.managementUrl).toBe('')
+
+    expect(() => loadProxyConfigMap({
+      CX_EDC_DEFAULT_MANAGEMENT_URL: 'https://consumer-edc.test/management',
       CX_EDC_TOKEN_SERVER_ENDPOINT: 'https://identity.test/token',
       CX_EDC_TOKEN_SERVER_CLIENT_ID: 'TEST_CLIENT_ID',
     })).toThrow('tokenServerClientSecret (CX_EDC_TOKEN_SERVER_CLIENT_SECRET)')

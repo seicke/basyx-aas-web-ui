@@ -224,10 +224,20 @@ function normalizeProxyConfig (
     return undefined
   }
 
+  const managementUrl = trimToUndefined(rawProxy.managementUrl) ?? ''
+  const auth = resolveManagementAuthConfig(proxyId, rawProxy, env)
+  if (managementUrl && !isManagementAuthConfigured(auth)) {
+    throw new Error(
+      `EDC proxy "${proxyId}" has a management URL but no EDC authentication. Set apiKey (CX_EDC_DEFAULT_API_KEY) `
+      + 'for API key mode, or tokenServerEndpoint, tokenServerClientId, and tokenServerClientSecret '
+      + '(CX_EDC_TOKEN_SERVER_*) for OAuth2 client credentials mode.',
+    )
+  }
+
   return {
     id: proxyId,
-    managementUrl: trimToUndefined(rawProxy.managementUrl) ?? '',
-    auth: resolveManagementAuthConfig(proxyId, rawProxy, env),
+    managementUrl,
+    auth,
     participantId: trimToUndefined(rawProxy.participantId),
     dspEndpoint: trimToUndefined(rawProxy.dspEndpoint),
     dataPlaneProxyUrl: trimToUndefined(rawProxy.dataPlaneProxyUrl),
