@@ -10,6 +10,7 @@ import {
   extractSubmodelOffer,
   fetchDtrShellDescriptors,
   fetchSubmodel,
+  forwardGetToEdc,
   forwardJsonToEdc,
   parseSubprotocolBody,
 } from '../../../server/edc-bff/edcRequests'
@@ -100,6 +101,39 @@ describe('EDC BFF request helpers', () => {
       status: 200,
       data: { ok: true },
     })
+  })
+
+  it('forwards JSON and GET requests with a cached OAuth2 access token instead of an API key', async () => {
+    const fetchMock = vi.fn(async (url: string) => url === 'https://identity.test/token'
+      ? Response.json({ access_token: 'TEST_ACCESS_TOKEN', expires_in: 300 })
+      : Response.json({ ok: true }))
+    const proxy: EdcProxyConfig = {
+      ...createProxyConfig(),
+      auth: {
+        mode: 'oauth2-client-credentials',
+        tokenServerEndpoint: 'https://identity.test/token',
+        clientId: 'TEST_CLIENT_ID',
+        clientSecret: 'TEST_CLIENT_SECRET',
+      },
+    }
+
+    await forwardJsonToEdc(proxy, '/v3/catalog/request', { request: true }, fetchMock as unknown as typeof fetch)
+    await forwardGetToEdc(proxy, '/v3/edrs/transfer-1/dataaddress', fetchMock as unknown as typeof fetch)
+
+    const managementCalls = fetchMock.mock.calls
+      .filter(([url]) => url.startsWith('https://consumer-edc.test/management')) as unknown as Array<[string, RequestInit]>
+
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(managementCalls.map(([url, init]) => [url, init.method])).toEqual([
+      ['https://consumer-edc.test/management/v3/catalog/request', 'POST'],
+      ['https://consumer-edc.test/management/v3/edrs/transfer-1/dataaddress', 'GET'],
+    ])
+    for (const [, init] of managementCalls) {
+      expect(init.headers).toEqual({
+        'Content-Type': 'application/json',
+        'Authorization': 'TEST_ACCESS_TOKEN',
+      })
+    }
   })
 
   it('extracts DTR catalog data and builds EDR contract requests', () => {

@@ -1,6 +1,13 @@
-import type { EdcProxyConfig } from '../../../server/edc-bff/types'
+import type { EdcOAuth2ClientCredentialsAuthConfig, EdcProxyConfig } from '../../../server/edc-bff/types'
 import { describe, expect, it, vi } from 'vitest'
 import { createManagementAuthProvider, getManagementAuthProvider } from '../../../server/edc-bff/managementAuth'
+
+const oauthConfig: EdcOAuth2ClientCredentialsAuthConfig = {
+  mode: 'oauth2-client-credentials',
+  tokenServerEndpoint: 'https://identity.test/token',
+  clientId: 'TEST_CLIENT_ID',
+  clientSecret: 'TEST_CLIENT_SECRET',
+}
 
 function createTokenResponse (body: unknown, status = 200): Response {
   return Response.json(body, { status })
@@ -23,14 +30,9 @@ describe('EDC management authentication', () => {
   })
 
   it('requests an access token with basic client credentials and caches it', async () => {
-    const fetchFn = vi.fn(async () => createTokenResponse({ access_token: 'TEST_ACCESS_TOKEN', expires_in: 300 }))
+    const fetchFn = createTokenFetch('TEST_ACCESS_TOKEN')
     const provider = createManagementAuthProvider(
-      {
-        mode: 'oauth2-client-credentials',
-        tokenServerEndpoint: 'https://identity.test/token',
-        clientId: 'TEST_CLIENT_ID',
-        clientSecret: 'TEST_CLIENT_SECRET',
-      },
+      oauthConfig,
       { fetchFn: fetchFn as unknown as typeof fetch, now: () => 0 },
     )
 
@@ -55,12 +57,7 @@ describe('EDC management authentication', () => {
     const proxy: EdcProxyConfig = {
       id: 'default',
       managementUrl: 'https://consumer-edc.test/management',
-      auth: {
-        mode: 'oauth2-client-credentials',
-        tokenServerEndpoint: 'https://identity.test/token',
-        clientId: 'TEST_CLIENT_ID',
-        clientSecret: 'TEST_CLIENT_SECRET',
-      },
+      auth: oauthConfig,
       allowedCounterPartyAddresses: [],
       allowInsecureCounterPartyAddresses: false,
       requestTimeoutMs: 30_000,
@@ -85,12 +82,7 @@ describe('EDC management authentication', () => {
     const fetchFn = vi.fn(async () => createTokenResponse({ access_token: 'TEST_ACCESS_TOKEN', expires_in: 60 }))
     let currentTime = 0
     const provider = createManagementAuthProvider(
-      {
-        mode: 'oauth2-client-credentials',
-        tokenServerEndpoint: 'https://identity.test/token',
-        clientId: 'TEST_CLIENT_ID',
-        clientSecret: 'TEST_CLIENT_SECRET',
-      },
+      oauthConfig,
       { fetchFn: fetchFn as unknown as typeof fetch, now: () => currentTime },
     )
 
@@ -103,15 +95,21 @@ describe('EDC management authentication', () => {
     expect(fetchFn).toHaveBeenCalledTimes(2)
   })
 
+  it('requests a new access token after a failed token request', async () => {
+    const fetchFn = vi.fn()
+      .mockResolvedValueOnce(createTokenResponse({ error: 'temporarily_unavailable' }, 503))
+      .mockResolvedValueOnce(createTokenResponse({ access_token: 'TEST_ACCESS_TOKEN', expires_in: 300 }))
+    const provider = createManagementAuthProvider(oauthConfig, { fetchFn })
+
+    await expect(provider.getAuthHeaders()).rejects.toThrow('EDC OAuth2 token endpoint responded with HTTP 503')
+    await expect(provider.getAuthHeaders()).resolves.toEqual({ Authorization: 'TEST_ACCESS_TOKEN' })
+    expect(fetchFn).toHaveBeenCalledTimes(2)
+  })
+
   it('reports specific token endpoint failures', async () => {
-    async function expectTokenError (response: Response | Error, message: string): Promise<void> {
+    async function expectTokenError (response: Response | Error, message: string, status = 502): Promise<void> {
       const provider = createManagementAuthProvider(
-        {
-          mode: 'oauth2-client-credentials',
-          tokenServerEndpoint: 'https://identity.test/token',
-          clientId: 'TEST_CLIENT_ID',
-          clientSecret: 'TEST_CLIENT_SECRET',
-        },
+        oauthConfig,
         {
           fetchFn: (async () => {
             if (response instanceof Error) {
@@ -122,12 +120,19 @@ describe('EDC management authentication', () => {
         },
       )
 
-      await expect(provider.getAuthHeaders()).rejects.toThrow(message)
+      await expect(provider.getAuthHeaders()).rejects.toMatchObject({
+        message: expect.stringContaining(message),
+        status,
+      })
     }
 
     await expectTokenError(
       createTokenResponse({ error: 'invalid_client' }, 401),
       'rejected the configured client credentials with HTTP 401',
+    )
+    await expectTokenError(
+      createTokenResponse({ error: 'access_denied' }, 403),
+      'rejected the configured client credentials with HTTP 403',
     )
     await expectTokenError(
       createTokenResponse({ error: 'server_error' }, 500),
@@ -145,5 +150,17 @@ describe('EDC management authentication', () => {
       new TypeError('fetch failed'),
       'EDC OAuth2 token request failed: fetch failed',
     )
+  })
+
+  it('reports a token request timeout as 504', async () => {
+    const fetchFn = ((_endpoint: string, init: RequestInit) => new Promise((_resolve, reject) => {
+      init.signal?.addEventListener('abort', () => reject(init.signal?.reason))
+    })) as unknown as typeof fetch
+    const provider = createManagementAuthProvider(oauthConfig, { fetchFn, requestTimeoutMs: 10 })
+
+    await expect(provider.getAuthHeaders()).rejects.toMatchObject({
+      message: 'EDC OAuth2 token request timed out after 10 ms',
+      status: 504,
+    })
   })
 })

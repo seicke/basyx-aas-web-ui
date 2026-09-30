@@ -90,6 +90,44 @@ describe('EDC BFF config', () => {
     expect(proxies.get('partnerB')?.auth).toMatchObject({ mode: 'api-key', apiKeyHeader: 'X-Api-Key' })
   })
 
+  it('selects the authentication mode per proxy in multi-proxy JSON', () => {
+    const proxies = loadProxyConfigMap({
+      CX_EDC_PROXY_CONFIG_JSON: JSON.stringify({
+        proxies: {
+          partnerA: {
+            managementUrl: 'https://consumer-a.test/management',
+            apiKey: 'TEST_API_KEY_A',
+          },
+          partnerB: {
+            managementUrl: 'https://consumer-b.test/management',
+            tokenServerEndpoint: 'https://identity.test/token',
+            tokenServerClientId: 'TEST_CLIENT_ID',
+            tokenServerClientSecret: 'TEST_CLIENT_SECRET',
+          },
+        },
+      }),
+    })
+
+    expect(proxies.get('partnerA')?.auth).toMatchObject({ mode: 'api-key', apiKey: 'TEST_API_KEY_A' })
+    expect(proxies.get('partnerB')?.auth).toEqual({
+      mode: 'oauth2-client-credentials',
+      tokenServerEndpoint: 'https://identity.test/token',
+      clientId: 'TEST_CLIENT_ID',
+      clientSecret: 'TEST_CLIENT_SECRET',
+    })
+
+    expect(() => loadProxyConfigMap({
+      CX_EDC_PROXY_CONFIG_JSON: JSON.stringify({
+        proxies: {
+          partnerB: {
+            managementUrl: 'https://consumer-b.test/management',
+            tokenServerEndpoint: 'https://identity.test/token',
+          },
+        },
+      }),
+    })).toThrow('EDC proxy "partnerB" uses OAuth2 client credentials authentication but is missing tokenServerClientId')
+  })
+
   it('selects OAuth2 client credentials mode when all token server settings are present', () => {
     const proxies = loadProxyConfigMap({
       CX_EDC_DEFAULT_MANAGEMENT_URL: 'https://consumer-edc.test/management',
