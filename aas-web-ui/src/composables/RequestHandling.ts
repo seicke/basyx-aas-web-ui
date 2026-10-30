@@ -12,6 +12,12 @@ class UntrustedEndpointError extends Error {
   }
 }
 
+class BlockedRedirectError extends UntrustedEndpointError {
+  constructor () {
+    super('Redirect blocked because its destination cannot be verified.')
+  }
+}
+
 function isInteractiveOAuth2WithoutToken (statusCode: number | undefined, infra: InfrastructureConfig | null | undefined): boolean {
   return statusCode === 403
     && infra?.auth?.securityType === 'OAuth2'
@@ -21,7 +27,7 @@ function isInteractiveOAuth2WithoutToken (statusCode: number | undefined, infra:
 
 export interface RequestErrorHandlingOptions {
   /**
-   * Status codes which are an expected outcome for this specific request.
+   * Status codes which are an expected outcome for this request or handler instance.
    * Authentication and authorization failures are never suppressed.
    */
   suppressStatuses?: ReadonlyArray<number>
@@ -29,6 +35,11 @@ export interface RequestErrorHandlingOptions {
    * Cancels the request without showing an error message.
    */
   signal?: AbortSignal
+  /**
+   * Reports a redirect as `redirected: true` without an error message.
+   * Its target stays hidden and is never requested.
+   */
+  acceptRedirect?: boolean
 }
 
 export interface RequestResult<T = unknown> {
@@ -50,7 +61,12 @@ export interface RequestSecurityContext {
   isolateAuthenticationFailures?: boolean
 }
 
-export function useRequestHandling () {
+/**
+ * Sets default error handling options for requests made through this instance.
+ * Explicit per-request options replace these defaults; they are not merged.
+ * Other instances keep their own defaults.
+ */
+export function useRequestHandling (defaultErrorOptions: RequestErrorHandlingOptions = {}) {
   let lastRequestFailureStatus: number | undefined
   let lastRequestFailureDetails: string | undefined
 
@@ -175,7 +191,13 @@ export function useRequestHandling () {
     requestOwnerId: string | undefined = getRequestOwnerId(),
     requestInfrastructure: InfrastructureConfig | null | undefined = infrastructureStore.getSelectedInfrastructure,
     isolateAuthenticationFailures = false,
-  ): { success: false, status?: number, aborted?: true, blocked?: true } {
+  ): { success: false, status?: number, aborted?: true, blocked?: true, redirected?: true } {
+    if (error instanceof BlockedRedirectError && errorHandlingOptions.acceptRedirect) {
+      setLastRequestFailureStatus(undefined)
+      setLastRequestFailureDetails(undefined)
+      return { success: false, redirected: true }
+    }
+
     if (error instanceof UntrustedEndpointError) {
       setLastRequestFailureStatus(undefined)
       setLastRequestFailureDetails(error.message)
@@ -374,7 +396,7 @@ export function useRequestHandling () {
     context: string,
     disableMessage: boolean,
     headers: Headers = new Headers(),
-    errorHandlingOptions: RequestErrorHandlingOptions = {},
+    errorHandlingOptions: RequestErrorHandlingOptions = defaultErrorOptions,
     responseType: 'auto' | 'blob' = 'auto',
     securityContext?: RequestSecurityContext,
   ): any {
@@ -482,7 +504,7 @@ export function useRequestHandling () {
     context: string,
     disableMessage: boolean,
     isTSRequest = false,
-    errorHandlingOptions: RequestErrorHandlingOptions = {},
+    errorHandlingOptions: RequestErrorHandlingOptions = defaultErrorOptions,
   ): any {
     const requestOwnerId = getRequestOwnerId()
     return fetchWithAuthentication(
@@ -565,7 +587,7 @@ export function useRequestHandling () {
     headers: Headers,
     context: string,
     disableMessage: boolean,
-    errorHandlingOptions: RequestErrorHandlingOptions = {},
+    errorHandlingOptions: RequestErrorHandlingOptions = defaultErrorOptions,
   ): any {
     const requestOwnerId = getRequestOwnerId()
     return fetchWithAuthentication(path, { method: 'PUT', body, headers, signal: errorHandlingOptions.signal })
@@ -620,7 +642,7 @@ export function useRequestHandling () {
     headers: Headers,
     context: string,
     disableMessage: boolean,
-    errorHandlingOptions: RequestErrorHandlingOptions = {},
+    errorHandlingOptions: RequestErrorHandlingOptions = defaultErrorOptions,
   ): any {
     const requestOwnerId = getRequestOwnerId()
     return fetchWithAuthentication(path, { method: 'PATCH', body, headers, signal: errorHandlingOptions.signal })
@@ -674,7 +696,7 @@ export function useRequestHandling () {
     headers: Headers,
     context: string,
     disableMessage: boolean,
-    errorHandlingOptions: RequestErrorHandlingOptions = {},
+    errorHandlingOptions: RequestErrorHandlingOptions = defaultErrorOptions,
   ): any {
     const requestOwnerId = getRequestOwnerId()
     return fetchWithAuthentication(path, { method: 'DELETE', headers, signal: errorHandlingOptions.signal })
@@ -738,7 +760,7 @@ export function useRequestHandling () {
       // a second request can carry infrastructure credentials to another origin.
       return fetch(path, { ...options, headers, redirect: 'manual' }).then(response => {
         if (response.type === 'opaqueredirect') {
-          throw new UntrustedEndpointError('Redirect blocked because its destination cannot be verified.')
+          throw new BlockedRedirectError()
         }
         return response
       })
