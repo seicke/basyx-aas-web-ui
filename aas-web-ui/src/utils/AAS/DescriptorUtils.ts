@@ -67,26 +67,3 @@ export function extractEndpointHref (descriptor_or_model: any, interfaceShortNam
 
   return endpoint?.protocolInformation?.href || ''
 }
-
-/**
- * Extracts the protocol from a given URL string.
- *
- * @param url - The URL from which to extract the protocol.
- * @returns The protocol of the URL (e.g. `"https:"`, `"http:"`),
- * or an empty string if the URL is empty or invalid.
- */
-export function getEndpointProtocol (url: string): string {
-  if (!url?.trim()) {
-    return ''
-  }
-
-  try {
-    const parsed = new URL(url.trim())
-    return parsed.protocol
-  } catch (error: unknown) {
-    if (error instanceof TypeError) {
-      return ''
-    }
-    throw error
-  }
-}
