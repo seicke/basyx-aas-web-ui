@@ -88,6 +88,9 @@ function redactCredentials (url: string): string {
 
 const apiBasePath = '/api/catena-x/edc'
 const maxBodyBytes = 64 * 1024
+const managementResources = ['assets', 'contractdefinitions', 'policydefinitions'] as const
+
+type EdcManagementResource = typeof managementResources[number]
 
 export function createEdcBffServer (config: EdcBffRuntimeConfig) {
   return createServer(async (request, response) => {
@@ -153,16 +156,10 @@ async function handleRequest (
     return
   }
 
-  if (await handleAssetRoute(request, response, proxy, route.action)) {
-    return
-  }
-
-  if (await handleContractDefinitionRoute(request, response, proxy, route.action)) {
-    return
-  }
-
-  if (await handlePolicyDefinitionRoute(request, response, proxy, route.action)) {
-    return
+  for (const resource of managementResources) {
+    if (await handleManagementResourceRoute(request, response, proxy, route.action, resource)) {
+      return
+    }
   }
 
   if (route.action === 'dtr/shell-descriptors' && request.method === 'POST') {
@@ -183,99 +180,34 @@ async function handleRequest (
   throw createHttpError('Route not found', 404)
 }
 
-async function handleAssetRoute (
+async function handleManagementResourceRoute (
   request: IncomingMessage,
   response: ServerResponse,
   proxy: EdcProxyConfig,
   action: string,
+  resource: EdcManagementResource,
 ): Promise<boolean> {
   if (request.method === 'POST') {
-    if (action === 'assets/request') {
-      await handleQuerySpecRequest(request, response, proxy, '/v3/assets/request')
+    if (action === `${resource}/request`) {
+      await handleQuerySpecRequest(request, response, proxy, `/v3/${resource}/request`)
       return true
     }
-    if (action === 'assets') {
-      await handleJsonRequest(request, response, proxy, '/v3/assets', 'POST')
+    if (action === resource) {
+      await handleJsonRequest(request, response, proxy, `/v3/${resource}`, 'POST')
       return true
     }
   }
 
-  if (!action.startsWith('assets/')) {
+  if (!action.startsWith(`${resource}/`)) {
     return false
   }
 
   if (request.method === 'PUT') {
-    await handleUpdateRequest(request, response, proxy, action, 'assets')
+    await handleUpdateRequest(request, response, proxy, action, resource)
     return true
   }
   if (request.method === 'DELETE') {
-    await handleDeleteRequest(response, proxy, action, 'assets')
-    return true
-  }
-
-  return false
-}
-
-async function handleContractDefinitionRoute (
-  request: IncomingMessage,
-  response: ServerResponse,
-  proxy: EdcProxyConfig,
-  action: string,
-): Promise<boolean> {
-  if (request.method === 'POST') {
-    if (action === 'contractdefinitions/request') {
-      await handleQuerySpecRequest(request, response, proxy, '/v3/contractdefinitions/request')
-      return true
-    }
-    if (action === 'contractdefinitions') {
-      await handleJsonRequest(request, response, proxy, '/v3/contractdefinitions', 'POST')
-      return true
-    }
-  }
-
-  if (!action.startsWith('contractdefinitions/')) {
-    return false
-  }
-
-  if (request.method === 'PUT') {
-    await handleUpdateRequest(request, response, proxy, action, 'contractdefinitions')
-    return true
-  }
-  if (request.method === 'DELETE') {
-    await handleDeleteRequest(response, proxy, action, 'contractdefinitions')
-    return true
-  }
-
-  return false
-}
-
-async function handlePolicyDefinitionRoute (
-  request: IncomingMessage,
-  response: ServerResponse,
-  proxy: EdcProxyConfig,
-  action: string,
-): Promise<boolean> {
-  if (request.method === 'POST') {
-    if (action === 'policydefinitions/request') {
-      await handleQuerySpecRequest(request, response, proxy, '/v3/policydefinitions/request')
-      return true
-    }
-    if (action === 'policydefinitions') {
-      await handleJsonRequest(request, response, proxy, '/v3/policydefinitions', 'POST')
-      return true
-    }
-  }
-
-  if (!action.startsWith('policydefinitions/')) {
-    return false
-  }
-
-  if (request.method === 'PUT') {
-    await handleUpdateRequest(request, response, proxy, action, 'policydefinitions')
-    return true
-  }
-  if (request.method === 'DELETE') {
-    await handleDeleteRequest(response, proxy, action, 'policydefinitions')
+    await handleDeleteRequest(response, proxy, action, resource)
     return true
   }
 
@@ -361,7 +293,7 @@ async function handleUpdateRequest (
   response: ServerResponse,
   proxy: EdcProxyConfig,
   action: string,
-  resource: 'assets' | 'contractdefinitions' | 'policydefinitions',
+  resource: EdcManagementResource,
 ): Promise<void> {
   const resourceId = decodeURIComponent(action.slice(resource.length + 1)).trim()
   if (!resourceId) {
@@ -379,7 +311,7 @@ async function handleDeleteRequest (
   response: ServerResponse,
   proxy: EdcProxyConfig,
   action: string,
-  resource: 'assets' | 'contractdefinitions' | 'policydefinitions',
+  resource: EdcManagementResource,
 ): Promise<void> {
   assertProxyConfigured(proxy)
   const resourceId = decodeURIComponent(action.slice(resource.length + 1)).trim()
