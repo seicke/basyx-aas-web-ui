@@ -67,7 +67,7 @@
           <JSONPreview
             class="mt-4"
             :json-content="jsonContent"
-            :title="`EDC Asset`"
+            :title="`Contract`"
           />
         </v-form>
       </v-card-text>
