@@ -207,7 +207,7 @@ export function buildDigitalTwinRegistryQuerySpec (limit = 50): Record<string, u
 export function extractDigitalTwinRegistryOffer (catalog: unknown): DigitalTwinRegistryOffer {
   return extractCatalogDatasetOffer(catalog, {
     datasetTypeId: dtrTaxonomyId,
-    missingDatasetMessage: 'EDC catalog did not contain a Digital Twin Registry dataset',
+    missingDatasetMessage: 'Catalog did not contain a Digital Twin Registry dataset',
     missingAssetIdMessage: 'Digital Twin Registry dataset did not include an asset ID',
     missingPolicyMessage: 'Digital Twin Registry dataset did not include a contract policy',
   })
@@ -221,7 +221,7 @@ export function extractSubmodelOffer (catalog: unknown, assetId: string): EdcAss
 
   return extractCatalogDatasetOffer(catalog, {
     assetId: normalizedAssetId,
-    missingDatasetMessage: 'EDC catalog did not contain the requested Submodel dataset',
+    missingDatasetMessage: 'Catalog did not contain the requested Submodel dataset',
     missingAssetIdMessage: 'Submodel dataset did not include an asset ID',
     missingPolicyMessage: 'Submodel dataset did not include a contract policy',
   })
@@ -265,7 +265,7 @@ function extractCatalogDatasetOffer (
   }
 
   if (!participantId) {
-    throw createHttpError('EDC catalog did not include a provider participant ID', 502)
+    throw createHttpError('Catalog did not include a provider participant ID', 502)
   }
 
   if (!policy || typeof policy !== 'object') {
@@ -534,7 +534,7 @@ async function ensureDtrAccess (
     }),
     fetchFn,
   )
-  assertSuccessfulEdcResponse(catalogResponse, 'EDC catalog request failed')
+  assertSuccessfulEdcResponse(catalogResponse, 'Catalog request failed')
 
   const offer = extractDigitalTwinRegistryOffer(catalogResponse.data)
   const negotiationResponse = await forwardToEdc(
@@ -585,7 +585,7 @@ async function ensureSubmodelAccess (
     buildCatalogRequestBody(proxy, submodelRequest),
     fetchFn,
   )
-  assertSuccessfulEdcResponse(catalogResponse, 'EDC catalog request failed')
+  assertSuccessfulEdcResponse(catalogResponse, 'Catalog request failed')
 
   const offer = extractSubmodelOffer(catalogResponse.data, endpoint.assetId)
   const negotiationResponse = await forwardToEdc(
@@ -605,11 +605,11 @@ async function negotiateEdrAccess (
   options: EdcDtrFetchOptions,
   fetchFn: typeof fetch,
 ): Promise<{ dataAddress: Record<string, unknown>, metadata: EdcDtrFetchMetadata }> {
-  assertSuccessfulEdcResponse(negotiationResponse, 'EDC contract negotiation failed')
+  assertSuccessfulEdcResponse(negotiationResponse, 'Contract negotiation failed')
 
   const contractNegotiationId = trimString((negotiationResponse.data as Record<string, unknown>)?.['@id'])
   if (!contractNegotiationId) {
-    throw createHttpError('EDC contract negotiation did not return a negotiation ID', 502)
+    throw createHttpError('Contract negotiation did not return a negotiation ID', 502)
   }
 
   const edrEntry = await pollEdrEntry(

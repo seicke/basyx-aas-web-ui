@@ -291,7 +291,14 @@
   <CreatePolicyDialog v-model="createPolicyDialog" :proxy-id="edcProxyId" @policy-created="onPolicyCreated" />
   <CreatePolicyFromTemplateDialog v-model="createPolicyFromTemplateDialog" :proxy-id="edcProxyId" @policy-created="onPolicyCreated" />
 
-  <UpdatePolicyDialog v-model="updatePolicyDialog" :policy="policyToUpdate" :proxy-id="edcProxyId" @policy-updated="onPolicyUpdated" />
+  <UpdateEdcResourceDialog
+    v-model="updatePolicyDialog"
+    label="Policy"
+    :proxy-id="edcProxyId"
+    :resource="policyToUpdate"
+    :update="updatePolicyDefinition"
+    @updated="onPolicyUpdated"
+  />
 
   <DeletePolicyDialog v-model="deletePolicyDialog" :policy="policyToDelete" :proxy-id="edcProxyId" @policy-deleted="onPolicyDeleted" />
 </template>
@@ -303,7 +310,7 @@
   import CreatePolicyDialog from '@/pages/modules/EclipseDataspaceConnector/components/Policies/Dialogs/CreatePolicyDialog.vue'
   import CreatePolicyFromTemplateDialog from '@/pages/modules/EclipseDataspaceConnector/components/Policies/Dialogs/CreatePolicyFromTemplateDialog.vue'
   import DeletePolicyDialog from '@/pages/modules/EclipseDataspaceConnector/components/Policies/Dialogs/DeletePolicyDialog.vue'
-  import UpdatePolicyDialog from '@/pages/modules/EclipseDataspaceConnector/components/Policies/Dialogs/UpdatePolicyDialog.vue'
+  import UpdateEdcResourceDialog from '@/pages/modules/EclipseDataspaceConnector/components/Shared/UpdateEdcResourceDialog.vue'
   import { useInfrastructureStore } from '@/store/InfrastructureStore'
 
   // Extend the ComponentPublicInstance type to include scrollToIndex
@@ -315,7 +322,7 @@
   const infrastructureStore = useInfrastructureStore()
 
   // Composables
-  const { queryPolicyDefinitions } = useCatenaXEdcClient()
+  const { queryPolicyDefinitions, updatePolicyDefinition } = useCatenaXEdcClient()
   const { copyToClipboard } = useClipboardUtil()
 
   // Vuetify

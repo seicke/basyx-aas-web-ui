@@ -9,10 +9,11 @@ export type EdcRequestAction = 'create' | 'update' | 'delete'
  */
 export function edcRequestFailureText (failure: CatenaXEdcFailure, resourceLabel: string, action: EdcRequestAction): string {
   if (action === 'create' && failure.status === 409) {
-    return `An EDC ${resourceLabel} with this ID already exists.`
+    const article = /^[aeiou]/i.test(resourceLabel) ? 'An' : 'A'
+    return `${article} ${resourceLabel} with this ID already exists.`
   }
   if (action !== 'create' && failure.status === 404) {
-    return `The EDC ${resourceLabel} does not exist (anymore).`
+    return `The ${resourceLabel} does not exist (anymore).`
   }
   if (failure.details) {
     return failure.details

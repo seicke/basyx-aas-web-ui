@@ -49,7 +49,7 @@ describe('EdcAssetFromAas.ts', () => {
     })
   })
 
-  it('creates the EDC Asset of an AAS pointing to the AAS endpoint', () => {
+  it('creates the Asset of an AAS pointing to the AAS endpoint', () => {
     const { createAasEdcAsset } = useEdcAssetFromAas()
     const aas = {
       id: 'urn:aas',
@@ -82,7 +82,7 @@ describe('EdcAssetFromAas.ts', () => {
     expect(asset.dataAddress).toEqual({ type: 'HttpData', baseUrl: 'https://repo.test/shells/dXJuOmFhcw', ...dataAddressSettings })
   })
 
-  it('creates the EDC Asset of a Submodel pointing to the Submodel endpoint', () => {
+  it('creates the Asset of a Submodel pointing to the Submodel endpoint', () => {
     const { createSmEdcAsset } = useEdcAssetFromAas()
     const sm = {
       id: 'urn:sm',
@@ -132,7 +132,7 @@ describe('EdcAssetFromAas.ts', () => {
     expect(asset.properties).not.toHaveProperty('aas-referables:description')
   })
 
-  it('adds the semanticId of the Submodel to the EDC Asset properties', () => {
+  it('adds the semanticId of the Submodel to the Asset properties', () => {
     const { createSmEdcAsset } = useEdcAssetFromAas()
     const sm = {
       id: 'urn:sm',
@@ -146,7 +146,7 @@ describe('EdcAssetFromAas.ts', () => {
     expect(asset['@context']).toMatchObject({ 'aas-semantics': 'https://admin-shell.io/aas/3/0/HasSemantics/' })
   })
 
-  it('adds the supplementalSemanticIds of the AAS and Submodel to the EDC Asset properties', () => {
+  it('adds the supplementalSemanticIds of the AAS and Submodel to the Asset properties', () => {
     const { createAasEdcAsset, createSmEdcAsset } = useEdcAssetFromAas()
     const reference = (value: string) => ({ type: 'ExternalReference', keys: [{ type: 'GlobalReference', value }] })
     const aas = { id: 'urn:aas', idShort: 'Pump', supplementalSemanticIds: [reference('urn:supplemental:aas')] }

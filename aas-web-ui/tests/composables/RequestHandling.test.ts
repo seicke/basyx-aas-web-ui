@@ -527,7 +527,7 @@ describe('RequestHandling.ts', () => {
     const { useRequestHandling } = await import('@/composables/RequestHandling')
     const { postRequest, consumeLastRequestFailureDetails } = useRequestHandling()
 
-    const response = await postRequest('/api/catena-x/edc/default/assets', '{}', new Headers(), 'creating EDC asset', true)
+    const response = await postRequest('/api/catena-x/edc/default/assets', '{}', new Headers(), 'creating Asset', true)
 
     expect(response).toEqual(expect.objectContaining({
       success: false,
@@ -552,7 +552,7 @@ describe('RequestHandling.ts', () => {
     const { useRequestHandling } = await import('@/composables/RequestHandling')
     const { postRequest } = useRequestHandling()
 
-    const response = await postRequest('/api/catena-x/edc/default/policydefinitions', '{}', new Headers(), 'creating EDC policy', true)
+    const response = await postRequest('/api/catena-x/edc/default/policydefinitions', '{}', new Headers(), 'creating Policy', true)
 
     expect(response.details).toBe(
       `mandatory object '${policyPath}' is missing\nvalue is not allowed (invalid value: Foo)`,
@@ -569,7 +569,7 @@ describe('RequestHandling.ts', () => {
     const { useRequestHandling } = await import('@/composables/RequestHandling')
     const { postRequest, consumeLastRequestFailureDetails } = useRequestHandling()
 
-    const response = await postRequest('/api/catena-x/edc/default/assets', '{}', new Headers(), 'creating EDC asset', true)
+    const response = await postRequest('/api/catena-x/edc/default/assets', '{}', new Headers(), 'creating Asset', true)
 
     expect(response).toEqual(expect.objectContaining({ success: false, status: 500 }))
     expect(response.details).toBeUndefined()
@@ -585,7 +585,7 @@ describe('RequestHandling.ts', () => {
     const { useRequestHandling } = await import('@/composables/RequestHandling')
     const { putRequest } = useRequestHandling()
 
-    const response = await putRequest('/api/catena-x/edc/default/assets/asset-1', '{', new Headers(), 'updating EDC asset', true)
+    const response = await putRequest('/api/catena-x/edc/default/assets/asset-1', '{', new Headers(), 'updating Asset', true)
 
     expect(response).toEqual(expect.objectContaining({ success: false, status: 400 }))
     expect(response.details).toContain('Message: Invalid JSON request body')
@@ -597,7 +597,7 @@ describe('RequestHandling.ts', () => {
     const { useRequestHandling } = await import('@/composables/RequestHandling')
     const { postRequest } = useRequestHandling()
 
-    const response = await postRequest('/api/catena-x/edc/default/assets', '{}', new Headers(), 'creating EDC asset', true)
+    const response = await postRequest('/api/catena-x/edc/default/assets', '{}', new Headers(), 'creating Asset', true)
 
     expect(response).toEqual(expect.objectContaining({ success: false, details: 'Failed to fetch' }))
   })

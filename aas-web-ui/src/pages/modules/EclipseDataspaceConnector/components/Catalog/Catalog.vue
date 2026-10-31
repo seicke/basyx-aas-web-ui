@@ -292,7 +292,7 @@
                 />
               </template>
 
-              Use case 3: Fetch EDC Asset
+              Use case 3: Fetch Asset
               <v-btn
                 v-else
                 class="text-buttonText"
@@ -300,7 +300,7 @@
                 :disabled="!dataTranserInProgress && !isHttpDataPull"
                 :prepend-icon="dataTranserInProgress ? 'mdi-close' : 'mdi-download'"
                 rounded="lg"
-                :text="dataTranserInProgress ? 'Cancel Fetch' : 'Fetch EDC Asset'"
+                :text="dataTranserInProgress ? 'Cancel Fetch' : 'Fetch Asset'"
                 variant="flat"
                 @click="dataTranserInProgress ? fetchAssetRef?.cancel() : fetchAssetRef?.fetchAsset()"
               />

@@ -115,7 +115,7 @@ describe('CatenaXEdcClient', () => {
         counterPartyAddress: 'https://counterparty-dsp.test/api/v1/dsp',
       }),
       expect.any(Headers),
-      'requesting EDC catalog',
+      'requesting catalog',
       true,
     )
     expect(result).toEqual({ dataset: [] })
@@ -123,19 +123,19 @@ describe('CatenaXEdcClient', () => {
 
   it.each([
     {
-      context: 'querying EDC assets',
+      context: 'querying Assets',
       data: [{ '@id': 'asset-1', 'properties': {}, 'dataAddress': {} }],
       query: () => useCatenaXEdcClient().queryAssets('default'),
       resource: 'assets',
     },
     {
-      context: 'querying EDC contract definitions',
+      context: 'querying Contracts',
       data: [{ '@id': 'contract-1' }],
       query: () => useCatenaXEdcClient().queryContractDefinitions('default'),
       resource: 'contractdefinitions',
     },
     {
-      context: 'querying EDC policy definitions',
+      context: 'querying Policies',
       data: [{ '@id': 'policy-1' }],
       query: () => useCatenaXEdcClient().queryPolicyDefinitions('default'),
       resource: 'policydefinitions',
@@ -160,7 +160,7 @@ describe('CatenaXEdcClient', () => {
 
   it.each([
     {
-      context: 'creating EDC asset',
+      context: 'creating Asset',
       create: () => useCatenaXEdcClient().createAsset('default', {
         '@id': 'asset-1',
         'properties': {},
@@ -171,7 +171,7 @@ describe('CatenaXEdcClient', () => {
       resource: 'assets',
     },
     {
-      context: 'creating EDC contract definition',
+      context: 'creating Contract',
       create: () => useCatenaXEdcClient().createContractDefinition('default', {
         '@id': 'contract-1',
         'accessPolicyId': 'access-1',
@@ -188,7 +188,7 @@ describe('CatenaXEdcClient', () => {
       resource: 'contractdefinitions',
     },
     {
-      context: 'creating EDC policy definition',
+      context: 'creating Policy',
       create: () => useCatenaXEdcClient().createPolicyDefinition('default', {
         '@id': 'policy-1',
         'policy': {},
@@ -240,7 +240,7 @@ describe('CatenaXEdcClient', () => {
 
   it.each([
     {
-      context: 'updating EDC asset',
+      context: 'updating Asset',
       id: 'asset/1',
       payload: { '@id': 'asset/1', 'properties': {}, 'dataAddress': {} },
       resource: 'assets',
@@ -251,7 +251,7 @@ describe('CatenaXEdcClient', () => {
       }),
     },
     {
-      context: 'updating EDC contract definition',
+      context: 'updating Contract',
       id: 'contract/1',
       payload: {
         '@id': 'contract/1',
@@ -268,7 +268,7 @@ describe('CatenaXEdcClient', () => {
       }),
     },
     {
-      context: 'updating EDC policy definition',
+      context: 'updating Policy',
       id: 'policy/1',
       payload: { '@id': 'policy/1', 'policy': {} },
       resource: 'policydefinitions',
@@ -294,19 +294,19 @@ describe('CatenaXEdcClient', () => {
 
   it.each([
     {
-      context: 'deleting EDC asset',
+      context: 'deleting Asset',
       deleteResource: () => useCatenaXEdcClient().deleteAsset('default', 'asset/1'),
       id: 'asset/1',
       resource: 'assets',
     },
     {
-      context: 'deleting EDC contract definition',
+      context: 'deleting Contract',
       deleteResource: () => useCatenaXEdcClient().deleteContractDefinition('default', 'contract/1'),
       id: 'contract/1',
       resource: 'contractdefinitions',
     },
     {
-      context: 'deleting EDC policy definition',
+      context: 'deleting Policy',
       deleteResource: () => useCatenaXEdcClient().deletePolicyDefinition('default', 'policy/1'),
       id: 'policy/1',
       resource: 'policydefinitions',
@@ -349,7 +349,7 @@ describe('CatenaXEdcClient', () => {
     mocks.deleteRequest.mockResolvedValue({
       success: false,
       status: 409,
-      details: 'PolicyDefinition policy-1 cannot be deleted as it is referenced by at least one contract definition',
+      details: 'PolicyDefinition policy-1 cannot be deleted as it is referenced by at least one contract',
     })
 
     const result = await useCatenaXEdcClient().deletePolicyDefinition('default', 'policy-1')
@@ -357,7 +357,7 @@ describe('CatenaXEdcClient', () => {
     expect(result).toEqual({
       success: false,
       status: 409,
-      details: 'PolicyDefinition policy-1 cannot be deleted as it is referenced by at least one contract definition',
+      details: 'PolicyDefinition policy-1 cannot be deleted as it is referenced by at least one contract',
     })
   })
 

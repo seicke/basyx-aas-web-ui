@@ -93,7 +93,7 @@
         emit('policy-deleted', true)
         deletePolicyDialog.value = false
       } else {
-        showFailureMessage('Failed to delete EDC Policy.', edcRequestFailureText(result, 'Policy', 'delete'))
+        showFailureMessage('Failed to delete Policy.', edcRequestFailureText(result, 'Policy', 'delete'))
       }
     } catch (error_) {
       console.error('Error deleting policy:', error_)

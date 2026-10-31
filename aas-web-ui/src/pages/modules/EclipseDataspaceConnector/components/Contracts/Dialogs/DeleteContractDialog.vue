@@ -93,7 +93,7 @@
         emit('contract-deleted', true)
         deleteContractDialog.value = false
       } else {
-        showFailureMessage('Failed to delete EDC Contract Definition.', edcRequestFailureText(result, 'Contract Definition', 'delete'))
+        showFailureMessage('Failed to delete Contract.', edcRequestFailureText(result, 'Contract', 'delete'))
       }
     } catch (error_) {
       console.error('Error deleting contract:', error_)

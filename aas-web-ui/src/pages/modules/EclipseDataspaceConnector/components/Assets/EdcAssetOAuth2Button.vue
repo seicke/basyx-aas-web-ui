@@ -1,6 +1,6 @@
 <template>
   <!-- Toggles the EdcAssetOAuth2Drawer, the badge marks configured OAuth2 values -->
-  <v-tooltip location="bottom" open-delay="600" text="OAuth2 for EDC assets">
+  <v-tooltip location="bottom" open-delay="600" text="OAuth2 for Assets">
     <template #activator="{ props: tooltipProps }">
       <v-btn
         v-bind="tooltipProps"

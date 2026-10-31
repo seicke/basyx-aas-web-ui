@@ -298,7 +298,7 @@
         createPolicyDialog.value = false
         resetForm()
       } else {
-        showFailureMessage('Failed to create EDC Policy.', edcRequestFailureText(result, 'Policy', 'create'))
+        showFailureMessage('Failed to create Policy.', edcRequestFailureText(result, 'Policy', 'create'))
       }
     } catch (error_) {
       console.error('Error creating policy:', error_)

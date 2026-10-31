@@ -54,7 +54,7 @@ async function openDialog () {
       },
     },
   })
-  // The referencing contract definitions are loaded when the dialog opens
+  // The referencing contracts are loaded when the dialog opens
   await wrapper.setProps({ modelValue: true })
   await flushPromises()
   return wrapper
@@ -73,7 +73,7 @@ describe('DeleteAssetDialog', () => {
     mocks.deleteAsset.mockResolvedValue({ success: true })
   })
 
-  it('deletes the referencing contract definitions before the asset', async () => {
+  it('deletes the referencing contracts before the asset', async () => {
     const wrapper = await openDialog()
 
     await clickDelete(wrapper)
@@ -85,7 +85,7 @@ describe('DeleteAssetDialog', () => {
     expect(mocks.dispatchSnackbar).not.toHaveBeenCalled()
   })
 
-  it('names the already deleted contract definitions if an agreement keeps the asset', async () => {
+  it('names the already deleted contracts if an agreement keeps the asset', async () => {
     mocks.deleteAsset.mockResolvedValue({ success: false, status: 409, details: agreementConflict })
     const wrapper = await openDialog()
     mocks.queryContractDefinitions.mockResolvedValue([])
@@ -94,16 +94,16 @@ describe('DeleteAssetDialog', () => {
 
     expect(mocks.dispatchSnackbar).toHaveBeenCalledWith(expect.objectContaining({
       color: 'error',
-      baseError: 'Failed to delete EDC Asset.',
-      extendedError: `${agreementConflict}\n\nAlready deleted Contract Definitions:\ncontract-1`,
+      baseError: 'Failed to delete Asset.',
+      extendedError: `${agreementConflict}\n\nAlready deleted Contracts:\ncontract-1`,
     }))
     expect(wrapper.emitted('asset-deleted')).toBeUndefined()
-    // The dialog shows the contract definitions still referencing the asset
+    // The dialog shows the contracts still referencing the asset
     expect(mocks.queryContractDefinitions).toHaveBeenCalledTimes(2)
     expect(wrapper.text()).not.toContain('contract-1')
   })
 
-  it('keeps the asset if a referencing contract definition cannot be deleted', async () => {
+  it('keeps the asset if a referencing contract cannot be deleted', async () => {
     mocks.queryContractDefinitions.mockResolvedValue([contractOf('contract-1'), contractOf('contract-3')])
     mocks.deleteContractDefinition
       .mockResolvedValueOnce({ success: true })
@@ -114,10 +114,10 @@ describe('DeleteAssetDialog', () => {
 
     expect(mocks.deleteAsset).not.toHaveBeenCalled()
     expect(mocks.dispatchSnackbar).toHaveBeenCalledWith(expect.objectContaining({
-      baseError: 'Failed to delete EDC Asset.',
-      extendedError: 'The asset was kept, as the Contract Definition contract-3 could not be deleted:\n'
-        + 'The EDC Contract Definition does not exist (anymore).'
-        + '\n\nAlready deleted Contract Definitions:\ncontract-1',
+      baseError: 'Failed to delete Asset.',
+      extendedError: 'The asset was kept, as the Contract contract-3 could not be deleted:\n'
+        + 'The Contract does not exist (anymore).'
+        + '\n\nAlready deleted Contracts:\ncontract-1',
     }))
     expect(wrapper.emitted('asset-deleted')).toBeUndefined()
   })

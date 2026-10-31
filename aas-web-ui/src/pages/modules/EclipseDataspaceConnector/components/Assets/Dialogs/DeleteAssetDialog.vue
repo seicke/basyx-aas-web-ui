@@ -2,14 +2,14 @@
   <v-dialog v-model="deleteAssetDialog" :width="800">
     <v-sheet border rounded="lg">
       <v-card-title class="bg-cardHeader">
-        Confirm EDC Asset Deletion
+        Confirm Asset Deletion
       </v-card-title>
 
       <v-divider />
 
       <v-card-text class="overflow-y-auto" style="max-height: calc(100vh - 296px)">
         <v-alert border="start" variant="tonal">
-          <span>Are you sure you want to delete the EDC Asset with the id </span>
+          <span>Are you sure you want to delete the Asset with the id </span>
           <span class="text-primary font-weight-bold">{{ asset['@id'] }}</span>
           <span>?</span>
         </v-alert>
@@ -22,7 +22,7 @@
           variant="tonal"
         >
           <div class="font-weight-bold mb-1">
-            The following contract definition{{ referencingContracts.length > 1 ? 's' : '' }} reference this asset and will be deleted first:
+            The following contract{{ referencingContracts.length > 1 ? 's' : '' }} reference this asset and will be deleted first:
           </div>
 
           <v-list
@@ -145,14 +145,14 @@
     }
 
     try {
-      // Delete all referencing contract definitions first, keep the asset if one of them cannot be deleted
+      // Delete all referencing contracts first, keep the asset if one of them cannot be deleted
       const deletedContractIds: Array<string> = []
       for (const contract of referencingContracts.value) {
         const contractResult = await deleteContractDefinition(props.proxyId, contract['@id'])
         if (!contractResult.success) {
-          const contractFailure = edcRequestFailureText(contractResult, 'Contract Definition', 'delete')
-          const details = `The asset was kept, as the Contract Definition ${contract['@id']} could not be deleted:\n${contractFailure}`
-          showFailureMessage('Failed to delete EDC Asset.', details + deletedContractsText(deletedContractIds))
+          const contractFailure = edcRequestFailureText(contractResult, 'Contract', 'delete')
+          const details = `The asset was kept, as the Contract ${contract['@id']} could not be deleted:\n${contractFailure}`
+          showFailureMessage('Failed to delete Asset.', details + deletedContractsText(deletedContractIds))
           await loadReferencingContracts()
           return
         }
@@ -166,7 +166,7 @@
         deleteAssetDialog.value = false
       } else {
         showFailureMessage(
-          'Failed to delete EDC Asset.',
+          'Failed to delete Asset.',
           edcRequestFailureText(result, 'Asset', 'delete') + deletedContractsText(deletedContractIds),
         )
         await loadReferencingContracts()
@@ -177,7 +177,7 @@
   }
 
   function deletedContractsText (contractIds: Array<string>): string {
-    return contractIds.length > 0 ? `\n\nAlready deleted Contract Definitions:\n${contractIds.join('\n')}` : ''
+    return contractIds.length > 0 ? `\n\nAlready deleted Contracts:\n${contractIds.join('\n')}` : ''
   }
 
 </script>

@@ -12,7 +12,7 @@
       "@type": "CriterionDto",
       "operandLeft": "https://w3id.org/edc/v0.0.1/ns/id",
       "operator": "=",
-      "operandRight": "{{EDC Asset ID|Enter the unique EDC asset identifier, e.g. a UUID|}}"
+      "operandRight": "{{Asset ID|Enter the unique Asset identifier, e.g. a UUID|}}"
     }
   ]
 }

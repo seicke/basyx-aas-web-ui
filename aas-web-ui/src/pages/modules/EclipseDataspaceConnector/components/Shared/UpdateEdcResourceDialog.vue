@@ -1,11 +1,11 @@
 <template>
   <v-dialog
-    v-model="updateAssetDialog"
+    v-model="updateDialog"
     style="min-height: 190px; max-height:90%; min-width: 800px; max-width: 90%"
   >
     <v-sheet border class="d-flex flex-column" height="100%" rounded="lg">
       <v-card-title class="bg-cardHeader d-flex align-center">
-        Update EDC Asset
+        Update {{ label }}
         <v-spacer />
 
         <v-tooltip location="bottom" open-delay="600">
@@ -33,7 +33,7 @@
           class="ma-2 mb-0 text-pre-line"
           density="compact"
           :text="jsonError ?? updateError ?? ''"
-          :title="jsonError ? undefined : 'Failed to update EDC Asset'"
+          :title="jsonError ? undefined : `Failed to update ${label}`"
           type="error"
           variant="tonal"
         />
@@ -78,7 +78,7 @@
         <v-btn
           rounded="lg"
           text="Cancel"
-          @click="updateAssetDialog = false"
+          @click="updateDialog = false"
         />
 
         <v-btn
@@ -88,40 +88,37 @@
           rounded="lg"
           text="Update"
           variant="flat"
-          @click="updateAsset"
+          @click="updateResource"
         />
       </v-card-actions>
     </v-sheet>
   </v-dialog>
 </template>
 
-<script lang="ts" setup>
-  import { type CatenaXEdcAsset, useCatenaXEdcClient } from '@/composables/Client/CatenaXEdcClient'
+<script lang="ts" setup generic="T extends Record<string, unknown>">
+  import type { CatenaXEdcResult } from '@/composables/Client/CatenaXEdcClient'
   import { edcRequestFailureText } from '@/pages/modules/EclipseDataspaceConnector/composables/EdcRequestFailure'
 
   const props = withDefaults(defineProps<{
-    modelValue: boolean
-    asset: any
+    resource: T
+    label: string // e.g. `Asset`, used in the title and the error messages
+    update: (proxyId: string, resourceId: string, resource: T) => Promise<CatenaXEdcResult>
     proxyId?: string
   }>(), {
     proxyId: 'default',
   })
 
   const emit = defineEmits<{
-    (event: 'update:model-value', value: boolean): void
-    (event: 'asset-updated'): void
+    (event: 'updated'): void
   }>()
 
-  // Composables
-  const { updateAsset: updateAssetInEdc } = useCatenaXEdcClient()
-
   // Data
-  const updateAssetDialog = ref(false)
+  const updateDialog = defineModel<boolean>({ required: true })
   const wordWrap = ref(false)
   const jsonText = ref('')
   const jsonError = ref<string | null>(null)
   const updateError = ref<string | null>(null) // Error of the EDC on the last update
-  const initialJson = ref('') // Compact JSON of the opened EDC Asset, to detect changes
+  const initialJson = ref('') // Compact JSON of the opened EDC resource, to detect changes
   const editorRef = ref<HTMLElement | null>(null)
   const lineNumbersRef = ref<HTMLElement | null>(null)
   const measurerRef = ref<HTMLElement | null>(null)
@@ -130,7 +127,7 @@
   const LINE_HEIGHT = 21
 
   // Computed
-  const assetId = computed(() => props.asset?.['@id'] ?? '')
+  const resourceId = computed(() => (props.resource?.['@id'] as string | undefined) ?? '')
   // Only a change of the content counts, not of its formatting
   const jsonChanged = computed(() => {
     try {
@@ -142,19 +139,11 @@
 
   // Watchers
   watch(
-    () => props.modelValue,
+    () => updateDialog.value,
     value => {
-      updateAssetDialog.value = value
       if (value) {
-        initFromAsset()
+        initFromResource()
       }
-    },
-  )
-
-  watch(
-    () => updateAssetDialog.value,
-    value => {
-      emit('update:model-value', value)
     },
   )
 
@@ -169,11 +158,11 @@
   )
 
   // Methods
-  function initFromAsset (): void {
-    if (!props.asset) return
+  function initFromResource (): void {
+    if (!props.resource) return
     jsonError.value = null
     updateError.value = null
-    jsonText.value = JSON.stringify(props.asset, null, 2)
+    jsonText.value = JSON.stringify(props.resource, null, 2)
     initialJson.value = JSON.stringify(JSON.parse(jsonText.value))
     // Sync DOM content after Vue updates the template
     nextTick(() => {
@@ -209,10 +198,10 @@
     jsonText.value = value
 
     try {
-      // The @id in the JSON selects the Asset to update, so it must stay the same
-      jsonError.value = JSON.parse(value)?.['@id'] === assetId.value
+      // The @id in the JSON selects the resource to update, so it must stay the same
+      jsonError.value = JSON.parse(value)?.['@id'] === resourceId.value
         ? null
-        : `The @id must stay "${assetId.value}", an update cannot change the ID of the EDC Asset.`
+        : `The @id must stay "${resourceId.value}", an update cannot change the ID of the ${props.label}.`
     } catch (error_) {
       jsonError.value = error_ instanceof Error ? error_.message : 'Invalid JSON'
     }
@@ -258,25 +247,25 @@
     }
   }
 
-  async function updateAsset (): Promise<void> {
+  async function updateResource (): Promise<void> {
     if (jsonError.value || !jsonText.value.trim()) return
 
-    const id = assetId.value
+    const id = resourceId.value
     if (!id) return
 
     try {
-      const assetToUpdate = JSON.parse(jsonText.value) as CatenaXEdcAsset
+      const resourceToUpdate = JSON.parse(jsonText.value) as T
 
       updateError.value = null
-      const result = await updateAssetInEdc(props.proxyId, id, assetToUpdate)
+      const result = await props.update(props.proxyId, id, resourceToUpdate)
       if (result.success) {
-        emit('asset-updated')
-        updateAssetDialog.value = false
+        emit('updated')
+        updateDialog.value = false
       } else {
-        updateError.value = edcRequestFailureText(result, 'Asset', 'update')
+        updateError.value = edcRequestFailureText(result, props.label, 'update')
       }
     } catch (error_) {
-      console.error('Error updating asset:', error_)
+      console.error(`Error updating ${props.label}:`, error_)
       jsonError.value = error_ instanceof Error ? error_.message : 'Invalid JSON'
     }
   }

@@ -1,5 +1,5 @@
 <template>
-  <!-- Optional OAuth2 of the EDC Asset data addresses, the default slot takes the EdcAssetOAuth2Fields -->
+  <!-- Optional OAuth2 of the Asset data addresses, the default slot takes the EdcAssetOAuth2Fields -->
   <v-navigation-drawer
     v-model="drawer"
     color="appNavigation"
@@ -8,7 +8,7 @@
   >
     <!-- Same height as the tab bar of JsonPreviewTabs, so both dividers align -->
     <div class="d-flex align-center px-4 text-title-medium" style="height: 47px">
-      Add OAuth2 for EDC assets
+      Add OAuth2 for Assets
     </div>
 
     <v-divider />

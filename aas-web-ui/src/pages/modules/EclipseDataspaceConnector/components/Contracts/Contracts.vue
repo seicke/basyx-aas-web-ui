@@ -270,7 +270,14 @@
 
   <CreateContractDialog v-model="createContractDialog" :proxy-id="edcProxyId" @contract-created="onContractCreated" />
 
-  <UpdateContractDialog v-model="updateContractDialog" :contract="contractToUpdate" :proxy-id="edcProxyId" @contract-updated="onContractUpdated" />
+  <UpdateEdcResourceDialog
+    v-model="updateContractDialog"
+    label="Contract"
+    :proxy-id="edcProxyId"
+    :resource="contractToUpdate"
+    :update="updateContractDefinition"
+    @updated="onContractUpdated"
+  />
 
   <DeleteContractDialog v-model="deleteContractDialog" :contract="contractToDelete" :proxy-id="edcProxyId" @contract-deleted="onContractDeleted" />
 </template>
@@ -281,7 +288,7 @@
   import { useClipboardUtil } from '@/composables/ClipboardUtil'
   import CreateContractDialog from '@/pages/modules/EclipseDataspaceConnector/components/Contracts/Dialogs/CreateContractDialog.vue'
   import DeleteContractDialog from '@/pages/modules/EclipseDataspaceConnector/components/Contracts/Dialogs/DeleteContractDialog.vue'
-  import UpdateContractDialog from '@/pages/modules/EclipseDataspaceConnector/components/Contracts/Dialogs/UpdateContractDialog.vue'
+  import UpdateEdcResourceDialog from '@/pages/modules/EclipseDataspaceConnector/components/Shared/UpdateEdcResourceDialog.vue'
   import { useInfrastructureStore } from '@/store/InfrastructureStore'
 
   // Extend the ComponentPublicInstance type to include scrollToIndex
@@ -293,7 +300,7 @@
   const infrastructureStore = useInfrastructureStore()
 
   // Composables
-  const { queryContractDefinitions } = useCatenaXEdcClient()
+  const { queryContractDefinitions, updateContractDefinition } = useCatenaXEdcClient()
   const { copyToClipboard } = useClipboardUtil()
 
   // Vuetify

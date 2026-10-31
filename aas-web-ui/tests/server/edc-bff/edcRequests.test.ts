@@ -471,7 +471,7 @@ describe('EDC BFF request helpers', () => {
       subprotocolBody: 'id=submodel-asset;dspEndpoint=https://counterparty-dsp.test/api/v1/dsp',
     }, {
       fetchFn: emptyCatalogFetch as typeof fetch,
-    })).rejects.toThrow('EDC catalog did not contain the requested Submodel dataset')
+    })).rejects.toThrow('Catalog did not contain the requested Submodel dataset')
 
     const timeoutFetch = vi.fn(async (url: string | URL | Request) => {
       const urlString = String(url)

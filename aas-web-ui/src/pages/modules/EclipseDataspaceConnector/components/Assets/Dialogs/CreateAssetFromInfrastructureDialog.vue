@@ -2,7 +2,7 @@
   <v-dialog v-model="createAssetDialog" height="90%" style="max-width: 1920px" width="90%">
     <v-sheet border class="d-flex flex-column" height="100%" rounded="lg">
       <v-card-title class="bg-cardHeader">
-        Create EDC Asset from AAS Infrastructure
+        Create Asset from AAS Infrastructure
       </v-card-title>
 
       <v-divider />
@@ -77,7 +77,7 @@
             <EdcAssetOAuth2Fields
               v-model="aasOAuth2"
               subtitle="Used by the data address of the AAS asset"
-              title="EDC Asset of AAS"
+              title="Asset of AAS"
             />
 
             <v-divider />
@@ -85,7 +85,7 @@
             <EdcAssetOAuth2Fields
               v-model="smOAuth2"
               subtitle="Used by the data addresses of all Submodel assets"
-              title="EDC Assets of Submodels"
+              title="Assets of Submodels"
             />
           </EdcAssetOAuth2Drawer>
 
@@ -101,7 +101,7 @@
                 <v-empty-state
                   :class="{ 'text-divider': !selectedInfrastructure }"
                   icon="mdi-gesture-tap"
-                  text="Select an AAS to register as EDC Asset."
+                  text="Select an AAS to register as Asset."
                   title="Select AAS"
                 >
                   <template #media>
@@ -120,7 +120,7 @@
 
                 <v-divider />
 
-                <!-- Preview of the EDC Asset of the AAS or Submodel selected in the tab bar above (2/3 of the height) -->
+                <!-- Preview of the Asset of the AAS or Submodel selected in the tab bar above (2/3 of the height) -->
                 <JsonPreviewTabs v-model="previewTab" hide-tabs :items="edcAssetTabs" style="flex: 2 1 0" />
               </template>
 
@@ -239,7 +239,7 @@
     {
       value: 'aas',
       title: 'AAS',
-      previewTitle: 'EDC Asset of AAS',
+      previewTitle: 'Asset of AAS',
       previewIcon: 'custom:edcIcon',
       icon: 'custom:aasIcon',
       json: createAasEdcAsset(selectedAas.value, aasOAuth2.value),
@@ -247,7 +247,7 @@
     ...selectedSubmodels.value.map(submodel => ({
       value: submodel.id,
       title: smTitleToDisplay(submodel),
-      previewTitle: 'EDC Asset of Submodel',
+      previewTitle: 'Asset of Submodel',
       previewIcon: 'custom:edcIcon',
       json: createSmEdcAsset(selectedAas.value, submodel, smOAuth2.value),
     })),
@@ -342,7 +342,7 @@
     }
 
     if (failedCount === 0) {
-      // Select the EDC Asset of the AAS, created or already existing
+      // Select the Asset of the AAS, created or already existing
       emit('assets-created', edcAssets[0]?.asset['@id'])
       createAssetDialog.value = false
     } else if (createdCount > 0) {
@@ -352,10 +352,10 @@
   }
 
   function createSummary (createdCount: number, existingCount: number, failedCount: number): string {
-    const assetsLabel = (count: number) => `${count} EDC Asset${count === 1 ? '' : 's'}`
+    const assetsLabel = (count: number) => `${count} Asset${count === 1 ? '' : 's'}`
     if (existingCount === 0 && failedCount === 0) return `Successfully created ${assetsLabel(createdCount)}.`
 
-    // The first part names the EDC Assets, e.g. "Created 1 EDC Asset, 1 already existed, 1 failed."
+    // The first part names the Assets, e.g. "Created 1 Asset, 1 already existed, 1 failed."
     const parts: Array<string> = []
     if (createdCount > 0) parts.push(`Created ${assetsLabel(createdCount)}`)
     if (existingCount > 0) parts.push(parts.length > 0 ? `${existingCount} already existed` : `${assetsLabel(existingCount)} already existed`)

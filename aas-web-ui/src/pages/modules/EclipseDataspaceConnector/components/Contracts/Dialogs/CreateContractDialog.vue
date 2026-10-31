@@ -14,7 +14,7 @@
           <div class="d-flex flex-column gap-3">
             <template v-for="(placeholder, index) in placeholders" :key="placeholder.label">
               <v-select
-                v-if="placeholder.label === 'EDC Asset ID'"
+                v-if="placeholder.label === 'Asset ID'"
                 v-model="placeholderValues[placeholder.label]"
                 :class="index > 0 ? 'mt-2': ''"
                 dense
@@ -186,7 +186,7 @@
   // Auto-generate Contract ID
   watch(
     () => [
-      placeholderValues.value['EDC Asset ID'],
+      placeholderValues.value['Asset ID'],
       placeholderValues.value['Access Policy ID'],
       placeholderValues.value['Usage Policy ID'],
     ],
@@ -275,7 +275,7 @@
         createContractDialog.value = false
         resetForm()
       } else {
-        showFailureMessage('Failed to create EDC Contract Definition.', edcRequestFailureText(result, 'Contract Definition', 'create'))
+        showFailureMessage('Failed to create Contract.', edcRequestFailureText(result, 'Contract', 'create'))
       }
     } catch (error_) {
       console.error('Error creating contract:', error_)

@@ -29,11 +29,12 @@ describe('EdcRequestFailure', () => {
       { success: false, status: 409, details: 'Asset with ID a already exists' },
       'Asset',
       'create',
-    )).toBe('An EDC Asset with this ID already exists.')
+    )).toBe('An Asset with this ID already exists.')
+    expect(edcRequestFailureText({ success: false, status: 409 }, 'Policy', 'create')).toBe('A Policy with this ID already exists.')
   })
 
   it('uses the reference of the EDC for a conflict on deletion', () => {
-    const details = 'PolicyDefinition p cannot be deleted as it is referenced by at least one contract definition'
+    const details = 'PolicyDefinition p cannot be deleted as it is referenced by at least one contract'
 
     expect(edcRequestFailureText({ success: false, status: 409, details }, 'Policy', 'delete')).toBe(details)
   })
@@ -41,9 +42,9 @@ describe('EdcRequestFailure', () => {
   it.each(['update', 'delete'] as const)('describes a missing resource on %s', action => {
     expect(edcRequestFailureText(
       { success: false, status: 404, details: 'Object of type ContractDefinition with ID=null was not found' },
-      'Contract Definition',
+      'Contract',
       action,
-    )).toBe('The EDC Contract Definition does not exist (anymore).')
+    )).toBe('The Contract does not exist (anymore).')
   })
 
   it('uses the error details of the EDC and falls back to the status', () => {
@@ -54,12 +55,12 @@ describe('EdcRequestFailure', () => {
   })
 
   it('shows the failure with its details', () => {
-    useEdcRequestFailureMessage().showFailureMessage('Failed to delete EDC Asset.', 'details', 'warning')
+    useEdcRequestFailureMessage().showFailureMessage('Failed to delete Asset.', 'details', 'warning')
 
     expect(mocks.dispatchSnackbar).toHaveBeenCalledWith(expect.objectContaining({
       status: true,
       color: 'warning',
-      baseError: 'Failed to delete EDC Asset.',
+      baseError: 'Failed to delete Asset.',
       extendedError: 'details',
     }))
   })
@@ -67,7 +68,7 @@ describe('EdcRequestFailure', () => {
   it.each(['authentication-required', 'access-denied'])('keeps a shown %s message', kind => {
     mocks.snackbar = { status: true, kind }
 
-    useEdcRequestFailureMessage().showFailureMessage('Failed to delete EDC Asset.', 'details')
+    useEdcRequestFailureMessage().showFailureMessage('Failed to delete Asset.', 'details')
 
     expect(mocks.dispatchSnackbar).not.toHaveBeenCalled()
   })

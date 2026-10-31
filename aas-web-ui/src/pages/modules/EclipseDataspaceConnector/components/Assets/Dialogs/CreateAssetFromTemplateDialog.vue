@@ -7,7 +7,7 @@
   >
     <v-sheet border class="d-flex flex-column" height="100%" rounded="lg">
       <v-card-title class="bg-cardHeader">
-        Create EDC Asset
+        Create Asset
       </v-card-title>
 
       <v-divider />
@@ -18,8 +18,8 @@
           <EdcAssetOAuth2Drawer v-model="oauth2Drawer">
             <EdcAssetOAuth2Fields
               v-model="oauth2"
-              subtitle="Used by the data address of the EDC asset"
-              title="EDC Asset"
+              subtitle="Used by the data address of the Asset"
+              title="Asset"
             />
           </EdcAssetOAuth2Drawer>
 
@@ -34,7 +34,7 @@
                 item-title="name"
                 item-value="value"
                 :items="assetTemplates"
-                label="Select EDC Asset Template"
+                label="Select Asset Template"
                 required
                 variant="outlined"
               >
@@ -81,13 +81,13 @@
                 </v-text-field>
               </div>
 
-              <!-- EDC Asset Preview, fits its content, the form scrolls instead of shrinking it -->
+              <!-- Asset Preview, fits its content, the form scrolls instead of shrinking it -->
               <JSONPreview
                 v-if="activeAssetTemplate"
                 class="mt-4 flex-shrink-0"
                 height="auto"
                 :json-content="jsonContent"
-                :title="`EDC Asset`"
+                :title="`Asset`"
               />
             </v-form>
           </v-main>
@@ -162,11 +162,11 @@
   const oauth2 = ref<EdcAssetOAuth2>(createEmptyEdcAssetOAuth2()) // Fills the "oauth2:*" placeholders of the template
 
   // Computed properties
-  // EDC Asset Templates
+  // Asset Templates
   const assetTemplates = computed(() => [
     {
       value: 'default',
-      name: 'Default EDC Asset',
+      name: 'Default Asset',
       description: '',
       asset: AssetTemplateDefault,
     },
@@ -352,7 +352,7 @@
         createAssetDialog.value = false
         resetForm()
       } else {
-        showFailureMessage('Failed to create EDC Asset.', edcRequestFailureText(result, 'Asset', 'create'))
+        showFailureMessage('Failed to create Asset.', edcRequestFailureText(result, 'Asset', 'create'))
       }
     } catch (error_) {
       console.error('Error creating asset:', error_)

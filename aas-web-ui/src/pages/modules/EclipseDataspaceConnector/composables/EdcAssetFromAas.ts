@@ -5,7 +5,7 @@ import AssetTemplateDefault from '@/pages/modules/EclipseDataspaceConnector/data
 import { base64Encode } from '@/utils/EncodeDecodeUtils'
 
 /**
- * OAuth2 values of the data address of an EDC Asset, empty values are left out of the asset.
+ * OAuth2 values of the data address of an Asset, empty values are left out of the asset.
  */
 export interface EdcAssetOAuth2 {
   clientId: string
@@ -82,7 +82,7 @@ export function aasSpecVersion (endpointInterface?: string): string {
 }
 
 /**
- * Adds the JSON-LD property `"prefix:name": value` and its prefix to the `@context` of an EDC Asset.
+ * Adds the JSON-LD property `"prefix:name": value` and its prefix to the `@context` of an Asset.
  */
 function addEdcAssetProperty (asset: CatenaXEdcAsset, prefix: string, namespace: string, name: string, value: unknown): void {
   asset['@context'] = { ...(asset['@context'] as Record<string, string>), [prefix]: namespace }
@@ -90,7 +90,7 @@ function addEdcAssetProperty (asset: CatenaXEdcAsset, prefix: string, namespace:
 }
 
 /**
- * Adds the AAS attributes of an Identifiable as JSON-LD properties to an EDC Asset,
+ * Adds the AAS attributes of an Identifiable as JSON-LD properties to an Asset,
  * using the `aas-*` namespaces of the given AAS specification version (e.g. `3.0`):
  * `aas-identifiables:id`, `aas-referables:idShort`, `aas-referables:displayName`, `aas-referables:description`,
  * Catena-X `aas-semantics:semanticId` (CX-0002) and `aas-semantics:supplementalSemanticId`. Empty attributes are left out.
@@ -148,7 +148,7 @@ export function useEdcAssetFromAas () {
   const { smTitleToDisplay } = useSubmodelDisplay()
 
   /**
-   * Creates the EDC Asset of an Identifiable pointing to its first endpoint, proxying only paths below it
+   * Creates the Asset of an Identifiable pointing to its first endpoint, proxying only paths below it
    * (`proxyPath`), but neither body, method nor query parameters of consumer requests.
    * The `@context` declares the EDC and Catena-X prefixes, the AAS attributes of the Identifiable are added as properties,
    * in the `aas-*` namespace version matching the interface version of the endpoint.
@@ -194,14 +194,14 @@ export function useEdcAssetFromAas () {
   }
 
   /**
-   * Creates the EDC Asset of an AAS, pointing to the AAS endpoint.
+   * Creates the Asset of an AAS, pointing to the AAS endpoint.
    */
   function createAasEdcAsset (aas: any, oauth2?: EdcAssetOAuth2): CatenaXEdcAsset {
     return createEdcAsset(aas, nameToDisplay(aas, 'en'), oauth2)
   }
 
   /**
-   * Creates the EDC Asset of a Submodel of an AAS, pointing to the Submodel endpoint.
+   * Creates the Asset of a Submodel of an AAS, pointing to the Submodel endpoint.
    * As required by Catena-X (CX-0002) for a single Submodel registered as Dataset, the asset is typed as
    * `cx-taxo:Submodel` (`dct:type`) and carries the AAS specification version of the endpoint (`cx-common:version`).
    */

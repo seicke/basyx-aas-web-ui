@@ -24,7 +24,7 @@
                 />
               </template>
 
-              <span>Reload EDC Asset List</span>
+              <span>Reload Asset List</span>
             </v-tooltip>
 
             <v-text-field
@@ -32,7 +32,7 @@
               clearable
               density="compact"
               hide-details
-              label="Search for EDC Asset ..."
+              label="Search for Asset ..."
               variant="outlined"
               @update:model-value="filterAssetList"
             />
@@ -51,56 +51,42 @@
               <v-sheet border>
                 <v-list class="py-0" density="compact">
 
-                  <!-- Create EDC Asset Dialog -->
+                  <!-- Create Asset Dialog -->
                   <v-tooltip location="bottom" open-delay="600">
                     <template #activator="{ props }">
                       <v-list-item prepend-icon="mdi-upload" slim v-bind="props" @click="createAssetDialog = true">
                         <template #prepend>
                           <v-icon size="small">mdi-plus</v-icon>
                         </template>
-                        Create EDC Asset
+                        Create Asset
                       </v-list-item>
                     </template>
 
                     <span>Create a new asset</span>
                   </v-tooltip>
 
-                  <!-- Create EDC Asset AAS/SMs Dialog -->
-                  <!-- <v-tooltip location="bottom" open-delay="600">
-                    <template #activator="{ props }">
-                      <v-list-item prepend-icon="mdi-upload" slim v-bind="props" @click="createAssetsAasSmsDialog = true">
-                        <template #prepend>
-                          <v-icon size="small">mdi-plus</v-icon>
-                        </template>
-                        Create EDC Assets from AAS/SMs
-                      </v-list-item>
-                    </template>
-
-                    <span>Create a new assets from an AAS and its SMs</span>
-                  </v-tooltip> -->
-
-                  <!-- Create EDC Asset from Template Dialog -->
+                  <!-- Create Asset from Template Dialog -->
                   <v-tooltip location="bottom" open-delay="600">
                     <template #activator="{ props }">
                       <v-list-item prepend-icon="mdi-upload" slim v-bind="props" @click="createAssetFromTemplateDialog = true">
                         <template #prepend>
                           <v-icon size="small">mdi-plus</v-icon>
                         </template>
-                        Create EDC Asset from Template
+                        Create Asset from Template
                       </v-list-item>
                     </template>
 
                     <span>Create a new asset from Template</span>
                   </v-tooltip>
 
-                  <!-- Create EDC Asset from AAS Infrastructure Dialog -->
+                  <!-- Create Asset from AAS Infrastructure Dialog -->
                   <v-tooltip location="bottom" open-delay="600">
                     <template #activator="{ props }">
                       <v-list-item slim v-bind="props" @click="createAssetFromInfrastructureDialog = true">
                         <template #prepend>
                           <v-icon size="small">mdi-plus</v-icon>
                         </template>
-                        Create EDC Asset from AAS Infrastructure
+                        Create Asset from AAS Infrastructure
                       </v-list-item>
                     </template>
 
@@ -123,7 +109,7 @@
 
             <template v-else>
 
-              <!-- List of EDC Assets -->
+              <!-- List of Assets -->
               <v-list
                 v-if="assetList.length > 0"
                 class="pa-0"
@@ -138,7 +124,7 @@
                 >
 
                   <template #default="{ item }">
-                    <!-- Single EDC Asset -->
+                    <!-- Single Asset -->
                     <v-list-item
                       :key="item['@id']"
                       :active="isSelected(item)"
@@ -176,7 +162,7 @@
                         open-delay="600"
                         transition="slide-x-transition"
                       >
-                        <!-- EDC Asset ID -->
+                        <!-- Asset ID -->
                         <div v-if="item['@id']" class="text-body-small">
                           <span class="font-weight-bold">{{ 'ID: ' }}</span>
                           {{ item['@id'] }}
@@ -228,7 +214,7 @@
                           <v-sheet border>
                             <v-list class="py-0" dense density="compact" slim>
 
-                              <!-- Update EDC Asset -->
+                              <!-- Update Asset -->
                               <v-list-item @click="openUpdateDialog(item)">
                                 <template #prepend>
                                   <v-icon size="x-small">mdi-pencil</v-icon>
@@ -237,7 +223,7 @@
                                 <v-list-item-subtitle>Edit Asset</v-list-item-subtitle>
                               </v-list-item>
 
-                              <!-- Delete EDC Asset -->
+                              <!-- Delete Asset -->
                               <v-list-item @click="openDeleteDialog(item)">
                                 <template #prepend>
                                   <v-icon size="x-small">mdi-delete</v-icon>
@@ -247,7 +233,7 @@
                               </v-list-item>
 
                               <v-divider />
-                              <!-- Copy EDC Asset ID to clipboard -->
+                              <!-- Copy Asset ID to clipboard -->
                               <v-list-item
                                 @click.stop="
                                   copyToClipboard(item['@id'], 'AssetId', copyIconAsRef)
@@ -288,8 +274,8 @@
 
             <v-empty-state
               icon="mdi-gesture-tap"
-              text="Please select a EDC Asset to view"
-              title="Select EDC Asset"
+              text="Please select an Asset to view"
+              title="Select Asset"
             >
               <template #media>
                 <v-icon size="64" />
@@ -301,7 +287,7 @@
             <JSONPreview
               :height="fullHeightMainJsonPreview"
               :json-content="selectedAsset"
-              title="EDC Asset"
+              title="Asset"
             />
           </template>
 
@@ -328,11 +314,13 @@
     @assets-created="assetId => onAssetsCreated(assetId, true)"
   />
 
-  <UpdateAssetDialog
+  <UpdateEdcResourceDialog
     v-model="updateAssetDialog"
-    :asset="assetToUpdate"
+    label="Asset"
     :proxy-id="edcProxyId"
-    @asset-updated="onAssetUpdated"
+    :resource="assetToUpdate"
+    :update="updateAsset"
+    @updated="onAssetUpdated"
   />
 
   <DeleteAssetDialog
@@ -352,7 +340,7 @@
   import CreateAssetFromTemplateDialog from '@/pages/modules/EclipseDataspaceConnector/components/Assets/Dialogs/CreateAssetFromTemplateDialog.vue'
   // import CreateAssetsAasSmsDialog from '@/pages/modules/EclipseDataspaceConnector/components/Assets/Dialogs/CreateAssetsAasSmsDialog.vue'
   import DeleteAssetDialog from '@/pages/modules/EclipseDataspaceConnector/components/Assets/Dialogs/DeleteAssetDialog.vue'
-  import UpdateAssetDialog from '@/pages/modules/EclipseDataspaceConnector/components/Assets/Dialogs/UpdateAssetDialog.vue'
+  import UpdateEdcResourceDialog from '@/pages/modules/EclipseDataspaceConnector/components/Shared/UpdateEdcResourceDialog.vue'
   import { useInfrastructureStore } from '@/store/InfrastructureStore'
 
   // Extend the ComponentPublicInstance type to include scrollToIndex
@@ -364,7 +352,7 @@
   const infrastructureStore = useInfrastructureStore()
 
   // Composables
-  const { queryAssets } = useCatenaXEdcClient()
+  const { queryAssets, updateAsset } = useCatenaXEdcClient()
   const { copyToClipboard } = useClipboardUtil()
 
   // Vuetify

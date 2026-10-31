@@ -2,9 +2,9 @@ import { type RequestResult, useRequestHandling } from '@/composables/RequestHan
 import { useEnvStore } from '@/store/EnvironmentStore'
 
 const edcResourceLabels = {
-  assets: { singular: 'asset', plural: 'assets' },
-  contractdefinitions: { singular: 'contract definition', plural: 'contract definitions' },
-  policydefinitions: { singular: 'policy definition', plural: 'policy definitions' },
+  assets: { singular: 'Asset', plural: 'Assets' },
+  contractdefinitions: { singular: 'Contract', plural: 'Contracts' },
+  policydefinitions: { singular: 'Policy', plural: 'Policies' },
 } as const
 
 type EdcResource = keyof typeof edcResourceLabels
@@ -219,7 +219,7 @@ export function useCatenaXEdcClient (): {
       url,
       JSON.stringify(request),
       createJsonHeaders(),
-      'requesting EDC catalog',
+      'requesting catalog',
       true,
     )
 
@@ -302,7 +302,7 @@ export function useCatenaXEdcClient (): {
       url,
       JSON.stringify(request),
       createJsonHeaders(),
-      `querying EDC ${edcResourceLabels[resource].plural}`,
+      `querying ${edcResourceLabels[resource].plural}`,
       true,
     )
 
@@ -330,7 +330,7 @@ export function useCatenaXEdcClient (): {
       url,
       JSON.stringify(payload),
       createJsonHeaders(),
-      `creating EDC ${edcResourceLabels[resource].singular}`,
+      `creating ${edcResourceLabels[resource].singular}`,
       true,
     )
 
@@ -363,7 +363,7 @@ export function useCatenaXEdcClient (): {
       url,
       JSON.stringify(payload),
       createJsonHeaders(),
-      `updating EDC ${edcResourceLabels[resource].singular}`,
+      `updating ${edcResourceLabels[resource].singular}`,
       true,
     )
 
@@ -394,7 +394,7 @@ export function useCatenaXEdcClient (): {
     const result = await deleteRequest(
       url,
       createJsonHeaders(),
-      `deleting EDC ${edcResourceLabels[resource].singular}`,
+      `deleting ${edcResourceLabels[resource].singular}`,
       true,
     )
 
