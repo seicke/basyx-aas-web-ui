@@ -21,9 +21,7 @@ import {
   fetchDtrShellDescriptorById,
   fetchDtrShellDescriptors,
   fetchSubmodel,
-  forwardDeleteToEdc,
-  forwardJsonToEdc,
-  forwardPutJsonToEdc,
+  forwardToEdc,
 } from './edcRequests.js'
 
 const proxyUrls = getProxyUrls()
@@ -224,8 +222,9 @@ async function handleDiscoveryRequest (
   const mode = body.mode ?? (body.counterPartyAddress ? 'dspversionparams' : 'connectors')
 
   if (mode === 'connectors') {
-    const edcResponse = await forwardJsonToEdc(
+    const edcResponse = await forwardToEdc(
       proxy,
+      'POST',
       '/v4alpha/connectordiscovery/connectors',
       buildConnectorDiscoveryRequestBody(body),
     )
@@ -234,8 +233,9 @@ async function handleDiscoveryRequest (
   }
 
   if (mode === 'dspversionparams') {
-    const edcResponse = await forwardJsonToEdc(
+    const edcResponse = await forwardToEdc(
       proxy,
+      'POST',
       '/v4alpha/connectordiscovery/dspversionparams',
       buildDspVersionParamsRequestBody(proxy, body),
     )
@@ -253,8 +253,9 @@ async function handleCatalogRequest (
 ): Promise<void> {
   assertProxyConfigured(proxy)
   const body = await readJsonBody<EdcCatalogRequest>(request)
-  const edcResponse = await forwardJsonToEdc(
+  const edcResponse = await forwardToEdc(
     proxy,
+    'POST',
     '/v3/catalog/request',
     buildCatalogRequestBody(proxy, body),
   )
@@ -269,7 +270,7 @@ async function handleQuerySpecRequest (
 ): Promise<void> {
   assertProxyConfigured(proxy)
   const body = await readJsonBody<EdcQuerySpecRequest>(request)
-  const edcResponse = await forwardJsonToEdc(proxy, path, buildQuerySpecRequestBody(body))
+  const edcResponse = await forwardToEdc(proxy, 'POST', path, buildQuerySpecRequestBody(body))
   writeJsonResponse(response, edcResponse.status, edcResponse.data)
 }
 
@@ -282,9 +283,7 @@ async function handleJsonRequest (
 ): Promise<void> {
   assertProxyConfigured(proxy)
   const body = await readJsonBody<Record<string, unknown>>(request)
-  const edcResponse = method === 'POST'
-    ? await forwardJsonToEdc(proxy, path, body)
-    : await forwardPutJsonToEdc(proxy, path, body)
+  const edcResponse = await forwardToEdc(proxy, method, path, body)
   writeJsonResponse(response, edcResponse.status, edcResponse.data)
 }
 
@@ -319,8 +318,9 @@ async function handleDeleteRequest (
     throw createHttpError(`Missing EDC ${resource} ID`, 400)
   }
 
-  const edcResponse = await forwardDeleteToEdc(
+  const edcResponse = await forwardToEdc(
     proxy,
+    'DELETE',
     `/v3/${resource}/${encodeURIComponent(resourceId)}`,
   )
   writeJsonResponse(response, edcResponse.status, edcResponse.data)

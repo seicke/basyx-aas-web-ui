@@ -429,10 +429,11 @@ export function parseSubprotocolBody (value: unknown): Record<string, string> {
   return params
 }
 
-export async function forwardJsonToEdc (
+export async function forwardToEdc (
   proxy: EdcProxyConfig,
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   path: string,
-  body: Record<string, unknown>,
+  body?: Record<string, unknown>,
   fetchFn: typeof fetch = fetch,
 ): Promise<EdcForwardResult> {
   const controller = new AbortController()
@@ -440,12 +441,12 @@ export async function forwardJsonToEdc (
 
   try {
     const response = await fetchFn(joinManagementUrl(proxy, path), {
-      method: 'POST',
+      method,
       headers: {
         'Content-Type': 'application/json',
         [proxy.apiKeyHeader]: proxy.apiKey,
       },
-      body: JSON.stringify(body),
+      body: body === undefined ? undefined : JSON.stringify(body),
       signal: controller.signal,
     })
     const data = await parseResponseBody(response)
@@ -462,135 +463,7 @@ export async function forwardJsonToEdc (
       throw error
     }
 
-    console.error('Error forwarding JSON to EDC:', error)
-    return {
-      status: 500,
-      headers: { 'content-type': 'application/json' },
-      data: { error: describeFetchError(error) },
-    }
-  } finally {
-    clearTimeout(timeout)
-  }
-}
-
-export async function forwardPutJsonToEdc (
-  proxy: EdcProxyConfig,
-  path: string,
-  body: Record<string, unknown>,
-  fetchFn: typeof fetch = fetch,
-): Promise<EdcForwardResult> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), proxy.requestTimeoutMs)
-
-  try {
-    const response = await fetchFn(joinManagementUrl(proxy, path), {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        [proxy.apiKeyHeader]: proxy.apiKey,
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    })
-    const data = await parseResponseBody(response)
-
-    return {
-      status: response.status,
-      headers: {
-        'content-type': response.headers.get('content-type') ?? 'application/json',
-      },
-      data,
-    }
-  } catch (error) {
-    if (isAbortError(error)) {
-      throw error
-    }
-
-    console.error('Error forwarding PUT to EDC:', error)
-    return {
-      status: 500,
-      headers: { 'content-type': 'application/json' },
-      data: { error: describeFetchError(error) },
-    }
-  } finally {
-    clearTimeout(timeout)
-  }
-}
-
-export async function forwardGetToEdc (
-  proxy: EdcProxyConfig,
-  path: string,
-  fetchFn: typeof fetch = fetch,
-): Promise<EdcForwardResult> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), proxy.requestTimeoutMs)
-
-  try {
-    const response = await fetchFn(joinManagementUrl(proxy, path), {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        [proxy.apiKeyHeader]: proxy.apiKey,
-      },
-      signal: controller.signal,
-    })
-    const data = await parseResponseBody(response)
-
-    return {
-      status: response.status,
-      headers: {
-        'content-type': response.headers.get('content-type') ?? 'application/json',
-      },
-      data,
-    }
-  } catch (error) {
-    if (isAbortError(error)) {
-      throw error
-    }
-
-    console.error('Error forwarding GET to EDC:', error)
-    return {
-      status: 500,
-      headers: { 'content-type': 'application/json' },
-      data: { error: describeFetchError(error) },
-    }
-  } finally {
-    clearTimeout(timeout)
-  }
-}
-
-export async function forwardDeleteToEdc (
-  proxy: EdcProxyConfig,
-  path: string,
-  fetchFn: typeof fetch = fetch,
-): Promise<EdcForwardResult> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), proxy.requestTimeoutMs)
-
-  try {
-    const response = await fetchFn(joinManagementUrl(proxy, path), {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        [proxy.apiKeyHeader]: proxy.apiKey,
-      },
-      signal: controller.signal,
-    })
-    const data = await parseResponseBody(response)
-
-    return {
-      status: response.status,
-      headers: {
-        'content-type': response.headers.get('content-type') ?? 'application/json',
-      },
-      data,
-    }
-  } catch (error) {
-    if (isAbortError(error)) {
-      throw error
-    }
-
-    console.error('Error forwarding DELETE to EDC:', error)
+    console.error(`Error forwarding ${method} to EDC:`, error)
     return {
       status: 500,
       headers: { 'content-type': 'application/json' },
@@ -649,8 +522,9 @@ async function ensureDtrAccess (
     throw createHttpError('counterPartyAddress is required for EDC DTR access', 400)
   }
 
-  const catalogResponse = await forwardJsonToEdc(
+  const catalogResponse = await forwardToEdc(
     proxy,
+    'POST',
     '/v3/catalog/request',
     buildCatalogRequestBody(proxy, {
       counterPartyId,
@@ -663,8 +537,9 @@ async function ensureDtrAccess (
   assertSuccessfulEdcResponse(catalogResponse, 'EDC catalog request failed')
 
   const offer = extractDigitalTwinRegistryOffer(catalogResponse.data)
-  const negotiationResponse = await forwardJsonToEdc(
+  const negotiationResponse = await forwardToEdc(
     proxy,
+    'POST',
     '/v3/edrs',
     buildEdrContractRequestBody(request, offer),
     fetchFn,
@@ -703,8 +578,9 @@ async function ensureSubmodelAccess (
     counterPartyAddress: endpoint.dspEndpoint,
     protocol: trimString(request.protocol) || defaultDspProtocol,
   }
-  const catalogResponse = await forwardJsonToEdc(
+  const catalogResponse = await forwardToEdc(
     proxy,
+    'POST',
     '/v3/catalog/request',
     buildCatalogRequestBody(proxy, submodelRequest),
     fetchFn,
@@ -712,8 +588,9 @@ async function ensureSubmodelAccess (
   assertSuccessfulEdcResponse(catalogResponse, 'EDC catalog request failed')
 
   const offer = extractSubmodelOffer(catalogResponse.data, endpoint.assetId)
-  const negotiationResponse = await forwardJsonToEdc(
+  const negotiationResponse = await forwardToEdc(
     proxy,
+    'POST',
     '/v3/edrs',
     buildEdrContractRequestBody(submodelRequest, offer),
     fetchFn,
@@ -776,8 +653,9 @@ async function pollEdrEntry (
   const maxAttempts = Math.max(1, attempts)
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const edrResponse = await forwardJsonToEdc(
+    const edrResponse = await forwardToEdc(
       proxy,
+      'POST',
       '/v3/edrs/request',
       buildEdrRequestQueryBody(contractNegotiationId),
       fetchFn,
@@ -802,9 +680,11 @@ async function getDataAddress (
   transferProcessId: string,
   fetchFn: typeof fetch,
 ): Promise<Record<string, unknown>> {
-  const dataAddressResponse = await forwardGetToEdc(
+  const dataAddressResponse = await forwardToEdc(
     proxy,
+    'GET',
     `/v3/edrs/${encodeURIComponent(transferProcessId)}/dataaddress?auto_refresh=true`,
+    undefined,
     fetchFn,
   )
   assertSuccessfulEdcResponse(dataAddressResponse, 'EDC dataaddress lookup failed')

@@ -10,7 +10,7 @@ import {
   extractSubmodelOffer,
   fetchDtrShellDescriptors,
   fetchSubmodel,
-  forwardJsonToEdc,
+  forwardToEdc,
   parseSubprotocolBody,
 } from '../../../server/edc-bff/edcRequests'
 
@@ -77,8 +77,9 @@ describe('EDC BFF request helpers', () => {
     }))
     const proxy = createProxyConfig()
 
-    const result = await forwardJsonToEdc(
+    const result = await forwardToEdc(
       proxy,
+      'POST',
       '/v3/catalog/request',
       { request: true },
       fetchMock,
