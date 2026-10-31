@@ -8,7 +8,7 @@ import { useInfrastructureStore } from '@/store/InfrastructureStore'
 import { base64Encode } from '@/utils/EncodeDecodeUtils'
 import { getActiveComponentUrlForTemplate, usesSubmodelSuperpath } from '@/utils/InfrastructureUtils'
 import { stripLastCharacter } from '@/utils/StringUtils'
-import { ASS_REPOSITORY_ENDPOINT_PATH } from './AASRepositoryClient'
+import { useAASRepositoryClient } from './AASRepositoryClient'
 
 export const SUBMODEL_REPOSITORY_ENDPOINT_PATH = '/submodels'
 
@@ -27,6 +27,7 @@ export function useSMRepositoryClient () {
     consumeLastRequestFailureDetails,
   } = useRequestHandling()
   const { generateUUIDFromString } = useIDUtils()
+  const { getAasEndpointById } = useAASRepositoryClient()
 
   function ensureWriteSuccess (response: any): boolean {
     return response?.success === true
@@ -34,7 +35,6 @@ export function useSMRepositoryClient () {
 
   // Computed Properties
   const submodelRepoUrl = computed(() => infrastructureStore.getSubmodelRepoURL)
-  const aasRepositoryUrl = computed(() => infrastructureStore.getAASRepoURL)
   const selectedInfrastructure = computed(() => infrastructureStore.getSelectedInfrastructure)
 
   function shouldUseAasSuperpath (infrastructure?: InfrastructureConfig): boolean {
@@ -61,35 +61,6 @@ export function useSMRepositoryClient () {
       smRepoUrl += SUBMODEL_REPOSITORY_ENDPOINT_PATH
     }
     return smRepoUrl
-  }
-
-  function getAasEndpointById (aasId: string, infrastructure?: InfrastructureConfig): string {
-    const failResponse = ''
-
-    if (!aasId) {
-      return failResponse
-    }
-
-    aasId = aasId.trim()
-
-    if (aasId === '') {
-      return failResponse
-    }
-
-    let aasRepoUrl = infrastructure
-      ? getActiveComponentUrlForTemplate(infrastructure, 'AASRepo')
-      : aasRepositoryUrl.value.trim()
-    if (aasRepoUrl === '') {
-      return failResponse
-    }
-    if (aasRepoUrl.endsWith('/')) {
-      aasRepoUrl = stripLastCharacter(aasRepoUrl)
-    }
-    if (!aasRepoUrl.endsWith(ASS_REPOSITORY_ENDPOINT_PATH)) {
-      aasRepoUrl += ASS_REPOSITORY_ENDPOINT_PATH
-    }
-
-    return aasRepoUrl + '/' + base64Encode(aasId)
   }
 
   function getAasEndpointForSubmodel (aasId?: string, infrastructure?: InfrastructureConfig): string {
