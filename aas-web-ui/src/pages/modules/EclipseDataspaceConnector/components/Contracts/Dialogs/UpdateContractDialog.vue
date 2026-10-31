@@ -98,7 +98,6 @@
 <script lang="ts" setup>
   import { type CatenaXEdcContractDefinition, useCatenaXEdcClient } from '@/composables/Client/CatenaXEdcClient'
   import { edcRequestFailureText } from '@/pages/modules/EclipseDataspaceConnector/composables/EdcRequestFailure'
-  import { formatJSON } from '@/utils/JsonUtils'
 
   const props = withDefaults(defineProps<{
     modelValue: boolean
@@ -174,11 +173,7 @@
     if (!props.contract) return
     jsonError.value = null
     updateError.value = null
-    try {
-      jsonText.value = formatJSON(JSON.stringify(props.contract))
-    } catch {
-      jsonText.value = JSON.stringify(props.contract, null, 2)
-    }
+    jsonText.value = JSON.stringify(props.contract, null, 2)
     initialJson.value = JSON.stringify(JSON.parse(jsonText.value))
     // Sync DOM content after Vue updates the template
     nextTick(() => {

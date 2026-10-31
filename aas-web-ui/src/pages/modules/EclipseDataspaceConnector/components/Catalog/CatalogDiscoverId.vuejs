@@ -304,7 +304,7 @@
         aasDescriptorJson.value = JSON.stringify(aasDescriptor)
         aasDescriptorJsonParsed.value = aasDescriptor
 
-        const formatted = formatJSON(aasDescriptorJson.value)
+        const formatted = formatJsonPreview(aasDescriptorJson.value)
         aasDescriptorJsonFormatted.value
           = Prism && Prism.highlight
             ? Prism.highlight(formatted, getPrismJsonLanguage(), 'json')
@@ -524,7 +524,7 @@
         aasJson.value = JSON.stringify(aas.value)
         aasJsonParsed.value = aas.value
 
-        const formatted = formatJSON(aasJson.value)
+        const formatted = formatJsonPreview(aasJson.value)
         aasJsonFormatted.value
           = Prism && Prism.highlight
             ? Prism.highlight(formatted, getPrismJsonLanguage(), 'json')

@@ -174,7 +174,6 @@
   } from '@/pages/modules/EclipseDataspaceConnector/composables/EdcRequestFailure'
   import PolicyTemplate from '@/pages/modules/EclipseDataspaceConnector/data/templates/template_policy.json'
   import UsagePolicyTemplate from '@/pages/modules/EclipseDataspaceConnector/data/templates/template_policy_usage.json'
-  import { formatJSON } from '@/utils/JsonUtils'
 
   const props = withDefaults(defineProps<{
     modelValue: boolean
@@ -344,7 +343,7 @@
   function refreshPreview (): void {
     try {
       const policy = buildPolicy()
-      jsonText.value = formatJSON(JSON.stringify(policy))
+      jsonText.value = JSON.stringify(policy, null, 2)
       jsonError.value = null
     } catch (error_) {
       jsonText.value = JSON.stringify(PolicyTemplate, null, 2)

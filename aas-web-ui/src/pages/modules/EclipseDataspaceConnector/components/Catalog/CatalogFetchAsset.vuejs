@@ -199,7 +199,7 @@
       assetJson.value = JSON.stringify(data)
       assetJsonParsed.value = data
 
-      const formatted = formatJSON(assetJson.value)
+      const formatted = formatJsonPreview(assetJson.value)
       assetJsonFormatted.value
         = Prism && Prism.highlight
           ? Prism.highlight(formatted, getPrismJsonLanguage(), 'json')

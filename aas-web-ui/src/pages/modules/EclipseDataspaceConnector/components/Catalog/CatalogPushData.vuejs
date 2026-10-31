@@ -674,7 +674,7 @@
     () => aasSmDataToPushJson.value,
     () => {
       try {
-        const formatted = formatJSON(aasSmDataToPushJson.value)
+        const formatted = formatJsonPreview(aasSmDataToPushJson.value)
 
         // Apply syntax highlighting using Prism
         if (Prism && Prism.highlight) {
