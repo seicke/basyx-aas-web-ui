@@ -279,7 +279,14 @@
     @updated="onContractUpdated"
   />
 
-  <DeleteContractDialog v-model="deleteContractDialog" :contract="contractToDelete" :proxy-id="edcProxyId" @contract-deleted="onContractDeleted" />
+  <DeleteEdcResourceDialog
+    v-model="deleteContractDialog"
+    :delete="deleteContractDefinition"
+    label="Contract"
+    :proxy-id="edcProxyId"
+    :resource="contractToDelete"
+    @deleted="onContractDeleted"
+  />
 </template>
 
 <script lang="ts" setup>
@@ -287,7 +294,7 @@
   import { useCatenaXEdcClient } from '@/composables/Client/CatenaXEdcClient'
   import { useClipboardUtil } from '@/composables/ClipboardUtil'
   import CreateContractDialog from '@/pages/modules/EclipseDataspaceConnector/components/Contracts/Dialogs/CreateContractDialog.vue'
-  import DeleteContractDialog from '@/pages/modules/EclipseDataspaceConnector/components/Contracts/Dialogs/DeleteContractDialog.vue'
+  import DeleteEdcResourceDialog from '@/pages/modules/EclipseDataspaceConnector/components/Shared/DeleteEdcResourceDialog.vue'
   import UpdateEdcResourceDialog from '@/pages/modules/EclipseDataspaceConnector/components/Shared/UpdateEdcResourceDialog.vue'
   import { useInfrastructureStore } from '@/store/InfrastructureStore'
 
@@ -300,7 +307,7 @@
   const infrastructureStore = useInfrastructureStore()
 
   // Composables
-  const { queryContractDefinitions, updateContractDefinition } = useCatenaXEdcClient()
+  const { deleteContractDefinition, queryContractDefinitions, updateContractDefinition } = useCatenaXEdcClient()
   const { copyToClipboard } = useClipboardUtil()
 
   // Vuetify

@@ -81,7 +81,7 @@ describe('DeleteAssetDialog', () => {
     expect(mocks.deleteContractDefinition).toHaveBeenCalledTimes(1)
     expect(mocks.deleteContractDefinition).toHaveBeenCalledWith('default', 'contract-1')
     expect(mocks.deleteAsset).toHaveBeenCalledWith('default', 'asset-1')
-    expect(wrapper.emitted('asset-deleted')).toEqual([[true]])
+    expect(wrapper.emitted('deleted')).toHaveLength(1)
     expect(mocks.dispatchSnackbar).not.toHaveBeenCalled()
   })
 
@@ -97,7 +97,7 @@ describe('DeleteAssetDialog', () => {
       baseError: 'Failed to delete Asset.',
       extendedError: `${agreementConflict}\n\nAlready deleted Contracts:\ncontract-1`,
     }))
-    expect(wrapper.emitted('asset-deleted')).toBeUndefined()
+    expect(wrapper.emitted('deleted')).toBeUndefined()
     // The dialog shows the contracts still referencing the asset
     expect(mocks.queryContractDefinitions).toHaveBeenCalledTimes(2)
     expect(wrapper.text()).not.toContain('contract-1')
@@ -119,6 +119,6 @@ describe('DeleteAssetDialog', () => {
         + 'The Contract does not exist (anymore).'
         + '\n\nAlready deleted Contracts:\ncontract-1',
     }))
-    expect(wrapper.emitted('asset-deleted')).toBeUndefined()
+    expect(wrapper.emitted('deleted')).toBeUndefined()
   })
 })

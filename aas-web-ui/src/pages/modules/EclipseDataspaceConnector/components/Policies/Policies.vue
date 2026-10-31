@@ -300,7 +300,14 @@
     @updated="onPolicyUpdated"
   />
 
-  <DeletePolicyDialog v-model="deletePolicyDialog" :policy="policyToDelete" :proxy-id="edcProxyId" @policy-deleted="onPolicyDeleted" />
+  <DeleteEdcResourceDialog
+    v-model="deletePolicyDialog"
+    :delete="deletePolicyDefinition"
+    label="Policy"
+    :proxy-id="edcProxyId"
+    :resource="policyToDelete"
+    @deleted="onPolicyDeleted"
+  />
 </template>
 
 <script lang="ts" setup>
@@ -309,7 +316,7 @@
   import { useClipboardUtil } from '@/composables/ClipboardUtil'
   import CreatePolicyDialog from '@/pages/modules/EclipseDataspaceConnector/components/Policies/Dialogs/CreatePolicyDialog.vue'
   import CreatePolicyFromTemplateDialog from '@/pages/modules/EclipseDataspaceConnector/components/Policies/Dialogs/CreatePolicyFromTemplateDialog.vue'
-  import DeletePolicyDialog from '@/pages/modules/EclipseDataspaceConnector/components/Policies/Dialogs/DeletePolicyDialog.vue'
+  import DeleteEdcResourceDialog from '@/pages/modules/EclipseDataspaceConnector/components/Shared/DeleteEdcResourceDialog.vue'
   import UpdateEdcResourceDialog from '@/pages/modules/EclipseDataspaceConnector/components/Shared/UpdateEdcResourceDialog.vue'
   import { useInfrastructureStore } from '@/store/InfrastructureStore'
 
@@ -322,7 +329,7 @@
   const infrastructureStore = useInfrastructureStore()
 
   // Composables
-  const { queryPolicyDefinitions, updatePolicyDefinition } = useCatenaXEdcClient()
+  const { deletePolicyDefinition, queryPolicyDefinitions, updatePolicyDefinition } = useCatenaXEdcClient()
   const { copyToClipboard } = useClipboardUtil()
 
   // Vuetify

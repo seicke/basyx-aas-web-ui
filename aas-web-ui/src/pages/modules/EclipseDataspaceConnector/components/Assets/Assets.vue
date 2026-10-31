@@ -327,7 +327,7 @@
     v-model="deleteAssetDialog"
     :asset="assetToDelete"
     :proxy-id="edcProxyId"
-    @asset-deleted="onAssetDeleted"
+    @deleted="onAssetDeleted"
   />
 </template>
 
