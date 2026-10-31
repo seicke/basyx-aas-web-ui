@@ -86,7 +86,7 @@ describe('DeleteAssetDialog', () => {
   })
 
   it('names the already deleted contract definitions if an agreement keeps the asset', async () => {
-    mocks.deleteAsset.mockResolvedValue({ success: false, status: 409, errorDetails: agreementConflict })
+    mocks.deleteAsset.mockResolvedValue({ success: false, status: 409, details: agreementConflict })
     const wrapper = await openDialog()
     mocks.queryContractDefinitions.mockResolvedValue([])
 

@@ -26,28 +26,28 @@ describe('EdcRequestFailure', () => {
 
   it('describes a conflict on creation as an existing resource', () => {
     expect(edcRequestFailureText(
-      { success: false, status: 409, errorDetails: 'Asset with ID a already exists' },
+      { success: false, status: 409, details: 'Asset with ID a already exists' },
       'Asset',
       'create',
     )).toBe('An EDC Asset with this ID already exists.')
   })
 
   it('uses the reference of the EDC for a conflict on deletion', () => {
-    const errorDetails = 'PolicyDefinition p cannot be deleted as it is referenced by at least one contract definition'
+    const details = 'PolicyDefinition p cannot be deleted as it is referenced by at least one contract definition'
 
-    expect(edcRequestFailureText({ success: false, status: 409, errorDetails }, 'Policy', 'delete')).toBe(errorDetails)
+    expect(edcRequestFailureText({ success: false, status: 409, details }, 'Policy', 'delete')).toBe(details)
   })
 
   it.each(['update', 'delete'] as const)('describes a missing resource on %s', action => {
     expect(edcRequestFailureText(
-      { success: false, status: 404, errorDetails: 'Object of type ContractDefinition with ID=null was not found' },
+      { success: false, status: 404, details: 'Object of type ContractDefinition with ID=null was not found' },
       'Contract Definition',
       action,
     )).toBe('The EDC Contract Definition does not exist (anymore).')
   })
 
   it('uses the error details of the EDC and falls back to the status', () => {
-    expect(edcRequestFailureText({ success: false, status: 400, errorDetails: 'mandatory value is missing' }, 'Policy', 'update'))
+    expect(edcRequestFailureText({ success: false, status: 400, details: 'mandatory value is missing' }, 'Policy', 'update'))
       .toBe('mandatory value is missing')
     expect(edcRequestFailureText({ success: false, status: 405 }, 'Policy', 'update')).toBe('The EDC responded with HTTP 405.')
     expect(edcRequestFailureText({ success: false }, 'Policy', 'create')).toBe('The EDC could not be reached.')

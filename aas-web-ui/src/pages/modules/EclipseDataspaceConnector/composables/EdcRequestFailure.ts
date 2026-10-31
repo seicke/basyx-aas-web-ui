@@ -14,8 +14,8 @@ export function edcRequestFailureText (failure: CatenaXEdcFailure, resourceLabel
   if (action !== 'create' && failure.status === 404) {
     return `The EDC ${resourceLabel} does not exist (anymore).`
   }
-  if (failure.errorDetails) {
-    return failure.errorDetails
+  if (failure.details) {
+    return failure.details
   }
   return failure.status ? `The EDC responded with HTTP ${failure.status}.` : 'The EDC could not be reached.'
 }

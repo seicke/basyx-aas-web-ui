@@ -228,7 +228,7 @@ describe('CatenaXEdcClient', () => {
       'dataAddress': {},
     })
 
-    expect(result).toEqual({ success: false, status: 409, errorDetails: 'Asset with ID asset-1 already exists' })
+    expect(result).toEqual({ success: false, status: 409, details: 'Asset with ID asset-1 already exists' })
   })
 
   it('returns a failure without request when no proxy is given', async () => {
@@ -341,7 +341,7 @@ describe('CatenaXEdcClient', () => {
     expect(result).toEqual({
       success: false,
       status: 400,
-      errorDetails: 'mandatory object \'https://w3id.org/edc/v0.0.1/ns/dataAddress\' is missing',
+      details: 'mandatory object \'https://w3id.org/edc/v0.0.1/ns/dataAddress\' is missing',
     })
   })
 
@@ -357,7 +357,7 @@ describe('CatenaXEdcClient', () => {
     expect(result).toEqual({
       success: false,
       status: 409,
-      errorDetails: 'PolicyDefinition policy-1 cannot be deleted as it is referenced by at least one contract definition',
+      details: 'PolicyDefinition policy-1 cannot be deleted as it is referenced by at least one contract definition',
     })
   })
 

@@ -46,7 +46,7 @@ export interface RequestResult<T = unknown> {
   success: boolean
   data?: T
   status?: number
-  details?: string // Error details of a failed request, built from its error payload
+  details?: string // Error details of a failed request, the same as consumeLastRequestFailureDetails returns for it
   raw?: Response
   aborted?: true
 }

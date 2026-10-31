@@ -71,7 +71,7 @@ export interface CatenaXEdcIdResponse {
 export interface CatenaXEdcFailure {
   success: false
   status?: number
-  errorDetails?: string
+  details?: string
 }
 
 /**
@@ -336,7 +336,7 @@ export function useCatenaXEdcClient (): {
 
     return result.success && result.data
       ? { success: true, data: result.data as CatenaXEdcIdResponse }
-      : { success: false, status: result.status, errorDetails: result.details }
+      : toEdcFailure(result)
   }
 
   async function updatePolicyDefinition (
@@ -402,7 +402,11 @@ export function useCatenaXEdcClient (): {
   }
 
   function toEdcResult (result: RequestResult): CatenaXEdcResult {
-    return result.success ? { success: true } : { success: false, status: result.status, errorDetails: result.details }
+    return result.success ? { success: true } : toEdcFailure(result)
+  }
+
+  function toEdcFailure (result: RequestResult): CatenaXEdcFailure {
+    return { success: false, status: result.status, details: result.details }
   }
 
   async function fetchDtrShellDescriptors (
